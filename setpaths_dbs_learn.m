@@ -3,7 +3,7 @@
 paths.data  = 'C:\dbsmulti'; 
     paths.groupanalysis = [paths.data, filesep, 'groupanalysis']; 
 paths.code = 'C:\docs\code'; 
-    paths.code_dbsmulti = [paths.code, filesep, 'FLvoice_run']; 
+    paths.code_dbsmulti = [paths.code, filesep, 'dbs_learn']; 
     paths.code_analysis = [paths.code_dbsmulti, filesep, 'analysis'];
     paths.annot = [paths.code_analysis, filesep, 'annot']; % small annotation files
     paths.config = [paths.code_dbsmulti, filesep, 'config']; 

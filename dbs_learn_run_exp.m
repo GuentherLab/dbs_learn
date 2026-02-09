@@ -104,7 +104,7 @@ close all force
 %
 
 
-paths = struct; paths_to_add = struct; setpaths_dbsmulti();
+paths = struct; paths_to_add = struct; setpaths_dbs_learn();
 
 %% audio device setup
 [~,computername] = system('hostname'); % might not work on non-windows machines

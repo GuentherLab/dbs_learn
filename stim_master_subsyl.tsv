@@ -1,0 +1,31 @@
+stim_group	is_native	name	n_syllables
+familiarization	1	SHRUB	
+familiarization	1	GLUB	
+familiarization	1	FRUB	
+familiarization	1	SMUB	
+familiarization	0	DLIG	
+familiarization	0	PSHUB	
+familiarization	0	BDEK	
+familiarization	0	ZGUD	
+trainA	0	KPUB	
+trainA	0	ZLUB	
+trainB	0	DGUB	
+trainB	0	SHFUB	
+novel	1	TRUB	
+novel	1	SNUB	
+novel	1	FLUB	
+novel	1	KRUB	
+novel	1	SPUB	
+novel	1	GRUB	
+novel	1	KLUB	
+novel	1	THRUB	
+novel	0	VZUB	
+novel	0	KFUB	
+novel	0	PTUB	
+novel	0	SHKUB	
+novel	0	FPUB	
+novel	0	GVUB	
+novel	0	FSHUB	
+novel	0	PKUB	
+			
+add set number to stim_group for novels			

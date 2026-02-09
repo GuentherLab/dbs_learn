@@ -12,10 +12,10 @@ ntrials_pretest_per_unq_stim = 2; % number of times to repeat each unique traini
 ntrials_train = 100; % total trials in each training phase (divided between trained stim)
 ntrials_test = 150; % total trials in each testing phase (divided between trained stim and test stim)
 
-projpath = 'C:\dbsmulti';
+projpath = 'C:\dbs_learn';
 
-stim_master_file = ['stim_master_', stimset, '.xlsx']; 
-stim_master = readtable(stim_master_file); 
+stim_master_file = ['stim_master_', stimset, '.tsv'; 
+stim_master = readtable('stim_master_multisyl.tsv','FileType','text'); 
 
 if strcmp(stimset, 'subsyl')
     subj_n_syls = 1;

@@ -6,10 +6,10 @@ function setup_subj_DBSMulti_fam_assess(subjID, session, stimset, run)
 vardefault('session',1);
 vardefault('run',1);
 
-projpath = 'C:\dbsmulti';
+projpath = 'C:\dbs_learn';
 
-stim_master_file = ['stim_master_', stimset, '.xlsx'; 
-stim_master = readtable(stim_master_file); 
+stim_master_file = ['stim_master_', stimset, '.tsv'; 
+stim_master = readtable('stim_master_multisyl.tsv','FileType','text'); 
 
 
 
