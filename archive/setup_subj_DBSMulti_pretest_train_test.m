@@ -1,7 +1,9 @@
-function setup_subj_DBSMulti_pretest_train_test(subjID, session, task, run, subj_n_syls)
+%% 2024 pilot version
 
-% Write experiment desc text files for Pretest, Train, and Test phases of DBS-Learn (multisyllabic and subsyllabic experiments)
-% By Andrew Meier @ Guenther Lab, 2026
+function setup_subj_DBSMulti_pretest_train_test(subjID, session, stimset, run, subj_n_syls)
+
+% Write experiment desc text files for Pretest, Train, and Test phases of SEQ experiment - DBS-Multisyllabic branch.
+% By Andrew Meier @ Guenther Lab, 2023
 
 %% initial setup and parameters
 
@@ -17,37 +19,10 @@ projpath = 'C:\dbs_learn';
 stim_master_file = ['stim_master_', stimset, '.tsv'; 
 stim_master = readtable('stim_master_multisyl.tsv','FileType','text'); 
 
-switch sestask
-    case 'sub_famil'
-
-    case 'sub_pretest'
-
-    case 'sub_trainA'
-
-    case 'sub_trainB'
-
-    case 'sub_test1'
-
-    case 'sub_test2'
-
-    case 'multi_famil'
-
-    case 'multi_assess'
-
-    case 'multi_pretest'
-
-    case 'multi_trainA'
-
-    case 'multi_trainB'
-
-    case 'multi_test1'
-
-    case 'multi_test2'
-
+if strcmp(stimset, 'subsyl')
+    subj_n_syls = 1;
 end
 
-op.session = regexp(task,'^[^_]*','match'); 
-op.task = regexp(sestas,'(?<=_).*', 'match'); 
 
 %% pretest
 taskpath = fullfile(projpath, sprintf('sub-%s', subjID),sprintf('ses-%d', 1),'beh','pretest');
