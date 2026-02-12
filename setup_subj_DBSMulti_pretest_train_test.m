@@ -8,46 +8,99 @@ function setup_subj_DBSMulti_pretest_train_test(subjID, session, task, run, subj
 vardefault('session',1);
 vardefault('run',1);
 
-ntrials_pretest_per_unq_stim = 2; % number of times to repeat each unique training-phase stim during the pretest
-ntrials_train = 100; % total trials in each training phase (divided between trained stim)
-ntrials_test = 150; % total trials in each testing phase (divided between trained stim and test stim)
+%%% specify the number of repetitions for each stim group within each task
+% no entries for famil or assses because we just present the lists once in order
+stim_reps_by_task = {...
 
-projpath = 'C:\dbs_learn';
+    %subsyl tasks
+    'subsyl', 'trainA', 'trainA', 75;...
 
-stim_master_file = ['stim_master_', stimset, '.tsv'; 
-stim_master = readtable('stim_master_multisyl.tsv','FileType','text'); 
+    'subsyl', 'trainB', 'trainB', 75;...
 
-switch sestask
-    case 'sub_famil'
+    'subsyl', 'test1',   'trainA', 20;...
+    'subsyl', 'test1',   'trainB', 20;...
+    'subsyl', 'test1',  'novel1_nat', 10;...
+    'subsyl', 'test1',  'novel1_nn', 10;...
 
-    case 'sub_pretest'
+    'subsyl', 'test2',   'trainA' 20;...
+    'subsyl', 'test2',   'trainB' 20;...
+    'subsyl', 'test2',  'novel2_nat', 10;...
+    'subsyl', 'test2',  'novel2_nn', 10;...
 
-    case 'sub_trainA'
 
-    case 'sub_trainB'
+    % multisyl tasks
+    'multisyl', 'trainA', 'trainA', 75;...
 
-    case 'sub_test1'
+    'multisyl', 'trainB', 'trainB', 75;...
 
-    case 'sub_test2'
+    'multisyl', 'test1', 'trainA', 20;... 
+    'multisyl', 'test1', 'trainB', 20;... 
+    'multisyl', 'test1', 'novel1', 20;... 
 
-    case 'multi_famil'
+    'multisyl', 'test2', 'trainA', 20;... 
+    'multisyl', 'test2', 'trainB', 20;... 
+    'multisyl', 'test2', 'novel2', 20;... 
 
-    case 'multi_assess'
+    }
 
-    case 'multi_pretest'
 
-    case 'multi_trainA'
 
-    case 'multi_trainB'
+% ntrials_pretest_per_unq_stim = 2; % number of times to repeat each unique training-phase stim during the pretest
+% ntrials_train = 100; % total trials in each training phase (divided between trained stim)
+% ntrials_test = 150; % total trials in each testing phase (divided between trained stim and test stim)
 
-    case 'multi_test1'
+% switch sestask
+%     case 'subsyl_famil'
+% 
+%     case 'sub_pretest'
+% 
+%     case 'sub_trainA'
+% 
+%     case 'sub_trainB'
+% 
+%     case 'sub_test1'
+% 
+%     case 'sub_test2'
+% 
+%     case 'multi_famil'
+% 
+%     case 'multi_assess'
+% 
+%     case 'multisyl_pretest'
+% 
+%     case 'multi_trainA'
+% 
+%     case 'multi_trainB'
+% 
+%     case 'multi_test1'
+% 
+%     case 'multi_test2'
+% 
+% end
 
-    case 'multi_test2'
+op.ses = regexp(task,'^[^_]*','match'); 
+op.task = regexp(sestas,'(?<=_).*', 'match'); 
+
+op.stim_master_file = [paths.code_dbs_multi, filesep, 'stim_master_', op.ses, '.tsv']; 
+stim_master = readtable('op.stim_master_file','FileType','text'); 
+
+
+if op.task == "famil" || op.task == "assess" % if familiarization or assessment phase, just take the exact listed stim in order
+    stimtab = stim_master(stim_master.stim_group == op.task, : )
+else % for training/testing, stim list needs to be sorted / multiplied / shuffled 
+    
+    % for multisyl, keep only stim with this subject's selected syllable count (does not apply to famil/assess)
+    if op.ses == "multisyl"
+        stim_master = stim_master(stim_master.n_syllables == op.subj_n_syls, :); 
+    end
+
+    
+
+
 
 end
 
-op.session = regexp(task,'^[^_]*','match'); 
-op.task = regexp(sestas,'(?<=_).*', 'match'); 
+
 
 %% pretest
 taskpath = fullfile(projpath, sprintf('sub-%s', subjID),sprintf('ses-%d', 1),'beh','pretest');
