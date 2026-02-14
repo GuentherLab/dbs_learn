@@ -14,7 +14,7 @@ ntrials_between_breaks = 34;
 
 ortho_font_size = 50;
 
-is_dbs_run =0; 
+is_dbs_run = 0; 
 
 starting_trial = 1; %%% if not ==1, currently causes a crash when compiling trial data at end of run
 
@@ -100,7 +100,6 @@ close all force
 %       deviceHead                  : device name for sound output (headphones) (see audiodevinfo().output.Name for details) 
 %       deviceScan                  : device name for scanner trigger (see audiodevinfo().output.Name for details)
 %
-
 
 paths = struct; paths_to_add = struct; setpaths_dbs_learn();
 
@@ -212,10 +211,9 @@ else % if no preset config file defined
         'run', 1,...
         'task', 'test', ...
         'gender', 'unspecified', ...
-        'scan', false, ...
         'timePostStim', [.25 .75],...
         'timePostOnset', 4.5,...
-        'timeScan', 1.6,...
+        % % % % % % % % % % 'timeScan', 1.6,...
         'timePreStim', .25,...
         'timeMax', 5.5, ...
         'timePreSound', .5, ...
@@ -224,17 +222,16 @@ else % if no preset config file defined
         'rmsBeepThresh', .1,...
         'rmsThreshTimeOnset', .02,...% 'rmsThreshTimeOnset', .10,...
         'rmsThreshTimeOffset', [.25 .25],...
-        'prescan', true, ...
         'minVoiceOnsetTime', 0.4, ...
-        'ipatDur', 4.75,...         %   prescan IPAT duration
-        'smsDur', 7,...             %   prescan SMS duration
+        % % % % % % % % % 'ipatDur', 4.75,...         %   prescan IPAT duration
+        % % % % % % % % % 'smsDur', 7,...             %   prescan SMS duration
         'deviceMic','',...
         'deviceHead','',...
-        'deviceScan','');
+
 end
 
 expParams.computer = host;
-expParams.audiopath = fullfile(pwd, 'stimuli', ['audio-',stimset]); 
+paths.audio_stim_ses = [paths.code_dbs_learn, filesep, 'stimuli', filesep, 'audio-',op.ses]; 
 
 for n=1:2:numel(varargin)-1, 
     assert(isfield(expParams,varargin{n}),'unrecognized option %s',varargin{n});
@@ -269,7 +266,7 @@ strVisual={'figure', 'fixpoint', 'orthography'};
 
 % GUI for user to modify options
 fnames=fieldnames(expParams);
-fnames=fnames(~ismember(fnames,{'visual', 'root', 'audiopath', 'figurespath', 'subject', 'session', 'run', 'task', 'gender', 'scan', 'deviceMic','deviceHead','deviceScan'}));
+fnames=fnames(~ismember(fnames,{'visual', 'root', 'audiopath', 'figurespath', 'subject', 'session', 'run', 'task', 'gender', 'deviceMic','deviceHead'}));
 for n=1:numel(fnames)
     val=expParams.(fnames{n});
     if ischar(val), fvals{n}=val;
@@ -278,7 +275,7 @@ for n=1:numel(fnames)
     end
 end
 
-out_dropbox = {'visual', 'root', 'figurespath', 'subject', 'session', 'run', 'task', 'gender', 'scan'};
+out_dropbox = {'visual', 'root', 'figurespath', 'subject', 'session', 'run', 'task', 'gender'};
 for n=1:numel(out_dropbox)
     val=expParams.(out_dropbox{n});
     if ischar(val), fvals_o{n}=val;
@@ -318,7 +315,15 @@ ht3c=uicontrol(thfig,'style','popupmenu','units','norm','position',[.5,.75-11*de
 
 uicontrol(thfig,'style','pushbutton','string','Start','units','norm','position',[.1,.01,.38,.10],'callback','uiresume','fontsize',default_fontsize-1);
 uicontrol(thfig,'style','pushbutton','string','Cancel','units','norm','position',[.51,.01,.38,.10],'callback','delete(gcbf)','fontsize',default_fontsize-1);
-if ~expParams.scan, set([ht3c0,ht3c],'visible','off'); end
+
+
+
+% % % % % if ~expParams.scan, set([ht3c0,ht3c],'visible','off'); end
+
+set([ht3c0,ht3c],'visible','off');
+
+
+
 ind2 = find(strcmp(out_dropbox, 'figurespath'));
 if ~strcmp(expParams.visual, 'figure'), set([ht_txtlist{ind2}, ht_list{ind2}], 'visible', 'off'); end
 
@@ -336,11 +341,11 @@ thfig_callback1;
         for tn=1:size(out_dropbox,2)
             if strcmp(out_dropbox{tn}, 'visual'), continue; end
             fvals_o{tn}=get(ht_list{tn}, 'string');
-            if strcmp(out_dropbox{tn},'scan')
-                if isequal(str2num(fvals_o{tn}),0), set([ht3c0,ht3c],'visible','off'); 
-                else set([ht3c0,ht3c],'visible','on'); 
-                end
-            end
+            % % % % % % % % % % % % % % % % if strcmp(out_dropbox{tn},'scan')
+            % % % % % % % % % % % % % % % %     if isequal(str2num(fvals_o{tn}),0), set([ht3c0,ht3c],'visible','off'); 
+            % % % % % % % % % % % % % % % %     else set([ht3c0,ht3c],'visible','on'); 
+            % % % % % % % % % % % % % % % %     end
+            % % % % % % % % % % % % % % % % end
         end
     end
     function thfig_callback4(varargin)
@@ -360,7 +365,7 @@ ok=ishandle(thfig);
 if ~ok, return; end
 expParams.deviceMic=strINPUT{get(ht3a,'value')};
 expParams.deviceHead=strOUTPUT{get(ht3b,'value')};
-expParams.deviceScan=strOUTPUT{get(ht3c,'value')};
+% % % % % % % % % % % % % % % % expParams.deviceScan=strOUTPUT{get(ht3c,'value')};
 delete(thfig);
 for n=1:numel(fnames)
     val=fvals{n};
@@ -396,58 +401,90 @@ set(annoStr.Stim, 'Visible','on');
 
 
 
-% locate files
-filepath = fullfile(expParams.root, sprintf('sub-%s',expParams.subject), sprintf('ses-%d',expParams.session),'beh', expParams.task);
-Input_audname  = fullfile(filepath,sprintf('sub-%s_ses-%d_run-%d_task-%s_desc-stimulus.txt',expParams.subject, expParams.session, expParams.run, expParams.task));
-Input_condname  = fullfile(filepath,sprintf('sub-%s_ses-%d_run-%d_task-%s_desc-conditions.txt',expParams.subject, expParams.session, expParams.run, expParams.task));
-Output_name = fullfile(filepath,sprintf('sub-%s_ses-%d_run-%d_task-%s_desc-audio.mat',expParams.subject, expParams.session, expParams.run, expParams.task));
-assert(~isempty(dir(Input_audname)), 'unable to find input file %s',Input_audname);
-if ~isempty(dir(Output_name))&&~isequal('Yes - overwrite', questdlg(sprintf('This subject %s already has an data file for this ses-%d_run-%d (task: %s), do you want to over-write?', expParams.subject, expParams.session, expParams.run, expParams.task),'Answer', 'Yes - overwrite', 'No - quit','No - quit')), return; end
-% read audio files and condition labels
-Input_files=regexp(fileread(Input_audname),'[\n\r]+','split');
-
-Input_files_temp=Input_files(cellfun('length',Input_files)>0);
-NoNull = find(~strcmp(Input_files_temp, 'NULL'));7
-
-if ispc
-    Input_files=arrayfun(@(x)fullfile(expParams.audiopath, expParams.task, strcat(strrep(x, '/', '\'), '.wav')), Input_files_temp);
-else
-    Input_files=arrayfun(@(x)fullfile(expParams.audiopath, expParams.task, strcat(x, '.wav')), Input_files_temp);
-end
+% locate files and generate trials 
+taskpath = fullfile(expParams.root, sprintf('sub-%s',expParams.subject), sprintf('ses-%d',expParams.session),'beh', expParams.task);
+filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.run)]; % this string gets used in a variety of files associated with this run
 
 
-if strcmp(expParams.visual, 'figure')
-    All_figures_str = dir(fullfile(expParams.figurespath, '*.png'));
-    All_figures = arrayfun(@(x)fullfile(All_figures_str(x).folder, All_figures_str(x).name), 1:length(All_figures_str), 'uni', 0);
-    figures=arrayfun(@(x)fullfile(expParams.figurespath, strcat(x, '.png')), Input_files_temp);
-    figureseq=arrayfun(@(x)find(strcmp(All_figures, x)), figures, 'uni', 0);
-    if sum(arrayfun(@(x)isempty(figureseq{x}), 1:length(figureseq))) ~= 0
-        disp('Some images not found or image names don''t match');
-        return
-    end
-end
+[trials, op] = generate_trial_table(op); 
 
-ok=cellfun(@(x)exist(x,'file'), Input_files(NoNull));
-assert(all(ok), 'unable to find files %s', sprintf('%s ',Input_files{NoNull(~ok)}));
-dirFiles=cellfun(@dir, Input_files(NoNull), 'uni', 0);
-NoNull=NoNull(cellfun(@(x)x.bytes>0, dirFiles));
+                    % % % % Input_audname  = fullfile(taskpath,sprintf('sub-%s_ses-%d_run-%d_task-%s_desc-stimulus.txt',expParams.subject, expParams.session, expParams.run, expParams.task));
+                    % % % % Input_condname  = fullfile(taskpath,sprintf('sub-%s_ses-%d_run-%d_task-%s_desc-conditions.txt',expParams.subject, expParams.session, expParams.run, expParams.task));
+                    % % % % 
+                    % % % % 
+                    % % % % Output_name = fullfile(taskpath,sprintf('sub-%s_ses-%d_run-%d_task-%s_desc-audio.mat',expParams.subject, expParams.session, expParams.run, expParams.task));
+                    % % % % assert(~isempty(dir(Input_audname)), 'unable to find input file %s',Input_audname);
+                    % % % % 
+                    % % % % 
+                    % % % % if ~isempty(dir(Output_name))&&~isequal('Yes - overwrite', questdlg(sprintf('This subject %s already has an data file for this ses-%d_run-%d (task: %s), do you want to over-write?', expParams.subject, expParams.session, expParams.run, expParams.task),'Answer', 'Yes - overwrite', 'No - quit','No - quit')), return; end
+                    % % % % % read audio files and condition labels
+                    % % % % Input_files=regexp(fileread(Input_audname),'[\n\r]+','split');
+                    % % % % 
+                    % % % % Input_files_temp=Input_files(cellfun('length',Input_files)>0);
+                    % % % % NoNull = find(~strcmp(Input_files_temp, 'NULL'));
+
+
+Input_files = cellfun(@(x)[x,'.wav'], unique(trials.name), 'UniformOutput', false);
+
+                % % % % if ispc
+                % % % %     Input_files=arrayfun(@(x)fullfile(paths.audio_stim_ses, expParams.task, strcat(strrep(x, '/', '\'), '.wav')), Input_files_temp);
+                % % % % else
+                % % % %     Input_files=arrayfun(@(x)fullfile(paths.audio_stim_ses, expParams.task, strcat(x, '.wav')), Input_files_temp);
+                % % % % end
+                % % % % 
+                % % % % 
+                % % % % if strcmp(expParams.visual, 'figure')
+                % % % %     All_figures_str = dir(fullfile(expParams.figurespath, '*.png'));
+                % % % %     All_figures = arrayfun(@(x)fullfile(All_figures_str(x).folder, All_figures_str(x).name), 1:length(All_figures_str), 'uni', 0);
+                % % % %     figures=arrayfun(@(x)fullfile(expParams.figurespath, strcat(x, '.png')), Input_files_temp);
+                % % % %     figureseq=arrayfun(@(x)find(strcmp(All_figures, x)), figures, 'uni', 0);
+                % % % %     if sum(arrayfun(@(x)isempty(figureseq{x}), 1:length(figureseq))) ~= 0
+                % % % %         disp('Some images not found or image names don''t match');
+                % % % %         return
+                % % % %     end
+                % % % % end
+                % % % % 
+                % % % % ok=cellfun(@(x)exist(x,'file'), Input_files(NoNull));
+                % % % % assert(all(ok), 'unable to find files %s', sprintf('%s ',Input_files{NoNull(~ok)}));
+
+ok=cellfun(@(x)exist(x,'file'), Input_files)
+assert(all(ok), 'unable to find files %s', sprintf('%s ',Input_files{~ok}));
+
+                % % % % dirFiles=cellfun(@dir, Input_files(NoNull), 'uni', 0);
+                % % % % NoNull=NoNull(cellfun(@(x)x.bytes>0, dirFiles));
+
+
 Input_sound=cell(size(Input_files));
 Input_fs=num2cell(ones(size(Input_files)));
-[Input_sound(NoNull),Input_fs(NoNull)]=cellfun(@audioread, Input_files(NoNull),'uni',0);
-[silent_sound,silent_fs]=audioread(fullfile(expParams.audiopath, 'silent.wav'));
-stimreads=cell(size(Input_files));
-stimreads(NoNull)=cellfun(@(x)dsp.AudioFileReader(x, 'SamplesPerFrame', 2048),Input_files(NoNull),'uni',0);
-stimreads(setdiff(1:numel(stimreads), NoNull))=arrayfun(@(x)dsp.AudioFileReader(fullfile(expParams.audiopath, 'silent.wav'), 'SamplesPerFrame', 2048),1:numel(Input_files(setdiff(1:numel(stimreads), NoNull))),'uni',0);
-sileread = dsp.AudioFileReader(fullfile(expParams.audiopath, 'silent.wav'), 'SamplesPerFrame', 2048);
 
-if isempty(dir(Input_condname))
-    [nill,Input_conditions]=arrayfun(@fileparts,Input_files,'uni',0);
-else
-    Input_conditions=regexp(fileread(Input_condname),'[\n\r]+','split');
-    Input_conditions=Input_conditions(cellfun('length',Input_conditions)>0);
-    assert(numel(Input_files)==numel(Input_conditions),'unequal number of lines/trials in %s (%d) and %s (%d)',Input_audname, numel(Input_files), Input_condname, numel(Input_conditions));
-end
-expParams.numTrials = length(Input_conditions); % pull out the number of trials from the stimList
+ 
+
+                % % % % [Input_sound(NoNull),Input_fs(NoNull)]=cellfun(@audioread, Input_files(NoNull),'uni',0);
+                % % % % [silent_sound,silent_fs]=audioread(fullfile(paths.audio_stim_ses, 'silent.wav'));
+                % % % % stimreads=cell(size(Input_files));
+                % % % % stimreads(NoNull)=cellfun(@(x)dsp.AudioFileReader(x, 'SamplesPerFrame', 2048),Input_files(NoNull),'uni',0);
+                % % % % stimreads(setdiff(1:numel(stimreads), NoNull))=arrayfun(@(x)dsp.AudioFileReader(fullfile(paths.audio_stim_ses, 'silent.wav'), 'SamplesPerFrame', 2048),1:numel(Input_files(setdiff(1:numel(stimreads), NoNull))),'uni',0);
+                % % % % sileread = dsp.AudioFileReader(fullfile(paths.audio_stim_ses, 'silent.wav'), 'SamplesPerFrame', 2048);
+
+
+[Input_sound,Input_fs]=cellfun(@audioread, Input_files,'uni',0);
+[silent_sound,silent_fs]=audioread(fullfile(paths.audio_stim, 'silent.wav'));
+stimreads=cell(size(Input_files));
+stimreads=cellfun(@(x)dsp.AudioFileReader(x, 'SamplesPerFrame', 2048),Input_files,'uni',0);
+% % % % stimreads(setdiff(1:numel(stimreads), NoNull))=arrayfun(@(x)dsp.AudioFileReader(fullfile(paths.audio_stim_ses, 'silent.wav'), 'SamplesPerFrame', 2048),1:numel(Input_files(setdiff(1:numel(stimreads), NoNull))),'uni',0);
+sileread = dsp.AudioFileReader(fullfile(paths.audio_stim_ses, 'silent.wav'), 'SamplesPerFrame', 2048);
+
+
+             
+
+                % % % % if isempty(dir(Input_condname))
+                % % % %     [nill,Input_conditions]=arrayfun(@fileparts,Input_files,'uni',0);
+                % % % % else
+                % % % %     Input_conditions=regexp(fileread(Input_condname),'[\n\r]+','split');
+                % % % %     Input_conditions=Input_conditions(cellfun('length',Input_conditions)>0);
+                % % % %     assert(numel(Input_files)==numel(Input_conditions),'unequal number of lines/trials in %s (%d) and %s (%d)',Input_audname, numel(Input_files), Input_condname, numel(Input_conditions));
+                % % % % end
+op.ntrials = length(Input_conditions); % pull out the number of trials from the stimList
 
 Input_duration=cellfun(@(a,b)numel(a)/b, Input_sound, Input_fs);
 %meanInput_duration=mean(Input_duration(Input_duration>0));
@@ -456,9 +493,7 @@ silence_dur=size(silent_sound,1)/silent_fs;
 [Input_fs{Input_duration==0}]=deal(44100);
 [Input_conditions{Input_duration==0}]=deal('NULL');
 
-% create random number stream so randperm doesn't call the same thing everytime when matlab is opened
-s = RandStream.create('mt19937ar','seed',sum(100*clock));
-RandStream.setGlobalStream(s);
+ 
 
 % set audio device variables: deviceReader: mic input; beepPlayer: beep output; triggerPlayer: trigger output
 if isempty(expParams.deviceMic)
@@ -467,16 +502,12 @@ if isempty(expParams.deviceMic)
 end
 if ~ismember(expParams.deviceMic, strINPUT), expParams.deviceMic=strINPUT{find(strncmp(lower(expParams.deviceMic),lower(strINPUT),numel(expParams.deviceMic)),1)}; end
 assert(ismember(expParams.deviceMic, strINPUT), 'unable to find match to deviceMic name %s',expParams.deviceMic);
-if isempty(expParams.deviceHead)||(expParams.scan&&isempty(expParams.deviceScan))
+if isempty(expParams.deviceHead)
     %disp(char(arrayfun(@(n)sprintf('Device #%d: %s ',n,info.output(n).Name),1:numel(info.output),'uni',0)));
     disp(char(arrayfun(@(n)sprintf('Device #%d: %s ',n,strOUTPUT{n}),1:numel(strOUTPUT),'uni',0)));
     if isempty(expParams.deviceHead),
         ID=input('HEADPHONES output device # : ');
         expParams.deviceMic=strOUTPUT{ID};
-    end
-    if expParams.scan&&isempty(expParams.deviceScan)
-        ID=input('SCAN TRIGGER output device # : ');
-        expParams.deviceScan=strOUTPUT{ID};
     end
 end
 % set up device reader settings for accessing audio signal during recording
@@ -500,33 +531,19 @@ beepread = dsp.AudioFileReader(fullfile(fileparts(which(mfilename)),'flvoice_run
 %headwrite = audioDeviceWriter('SampleRate',beepread.SampleRate,'Device',expParams.deviceHead, 'SupportVariableSizeInput', true, 'BufferSize', 2048);
 headwrite = audioDeviceWriter('SampleRate',beepread.SampleRate,'Device',expParams.deviceHead);
 
-if expParams.scan,
-    if ~ismember(expParams.deviceScan, strOUTPUT), expParams.deviceScan=strOUTPUT{find(strncmp(lower(expParams.deviceScan),lower(strOUTPUT),numel(expParams.deviceScan)),1)}; end
-    assert(ismember(expParams.deviceScan, strOUTPUT), 'unable to find match to deviceScan name %s',expParams.deviceScan);
-    [ok,ID]=ismember(expParams.deviceScan, strOUTPUT);
-    [twav, tfs] = audioread(fullfile(fileparts(which(mfilename)),'flvoice_run_trigger.wav')); % read in sine wav file to trigger the scanner
-    trigdur = numel(twav)/tfs;
-    %triggerPlayer = audioplayer(twav, tfs, 24, info.output(ID).ID);
-    trigread = dsp.AudioFileReader(fullfile(fileparts(which(mfilename)),'flvoice_run_trigger.wav'), 'SamplesPerFrame', 2048);
-    trigwrite = audioDeviceWriter('SampleRate',trigread.SampleRate,'Device',expParams.deviceScan);
-end
-
 % checks values of timing variables
 expParams.beepoffset = beepoffset;
 
 assert(all(isfinite(expParams.timePostStim))&ismember(numel(expParams.timePostStim),[1,2]), 'timePostStim field must have one or two elements');
 assert(all(isfinite(expParams.timePostOnset))&ismember(numel(expParams.timePostOnset),[1,2]), 'timePostOnset field must have one or two elements');
-assert(all(isfinite(expParams.timeScan))&ismember(numel(expParams.timeScan),[1,2]), 'timeScan field must have one or two elements');
 assert(all(isfinite(expParams.timePreStim))&ismember(numel(expParams.timePreStim),[1,2]), 'timePreStim field must have one or two elements');
 assert(all(isfinite(expParams.timeMax))&ismember(numel(expParams.timeMax),[1,2]), 'timeMax field must have one or two elements');
 if numel(expParams.timePostStim)==1, expParams.timePostStim=expParams.timePostStim+[0 0]; end
 if numel(expParams.timePostOnset)==1, expParams.timePostOnset=expParams.timePostOnset+[0 0]; end
-if numel(expParams.timeScan)==1, expParams.timeScan=expParams.timeScan+[0 0]; end
 if numel(expParams.timePreStim)==1, expParams.timePreStim=expParams.timePreStim+[0 0]; end
 if numel(expParams.timeMax)==1, expParams.timeMax=expParams.timeMax+[0 0]; end
 expParams.timePostStim=sort(expParams.timePostStim);
 expParams.timePostOnset=sort(expParams.timePostOnset);
-expParams.timeScan=sort(expParams.timeScan);
 expParams.timePreStim=sort(expParams.timePreStim);
 expParams.timeMax=sort(expParams.timeMax);
 rmsThresh = expParams.rmsThresh; % params for detecting voice onset %voiceCal.rmsThresh; % alternatively, run a few iterations of testThreshold and define rmsThreshd here with the resulting threshold value after convergence
@@ -549,66 +566,7 @@ end
 
 if strcmp(expParams.visual, 'figure'), imgBuf = arrayfun(@(x)imread(All_figures{x}), 1:length(All_figures),'uni',0); end
     
-%% pre scans
-if expParams.scan && expParams.prescan && ~CMRR
-    fprintf('\nStarting prescans\n');
-    psTime = tic;
-    fprintf('\nPrescan IPAT 1, duration %.2f seconds\n', expParams.ipatDur);
-    %play(triggerPlayer)
-    while ~isDone(trigread); sound=trigread();trigwrite(sound);end;reset(trigread);reset(trigwrite);
-    toc(psTime);
-    pause(expParams.ipatDur+0.1);
-    fprintf('\nPrescan IPAT 2, duration %.2f seconds\n', expParams.ipatDur);
-    %play(triggerPlayer)
-    while ~isDone(trigread); sound=trigread();trigwrite(sound);end;reset(trigread);reset(trigwrite);
-    toc(psTime);
-    pause(expParams.ipatDur);
-    fprintf('\nPrescan SMS, duration %.2f seconds\n', expParams.smsDur);
-    %play(triggerPlayer)
-    while ~isDone(trigread); sound=trigread();trigwrite(sound);end;reset(trigread);reset(trigwrite);
-    toc(psTime);
-    pause(expParams.smsDur);
-    fprintf('\nPrescan dummy scan 1, duration %.2f seconds\n', expParams.timeScan(1));
-    %play(triggerPlayer)
-    while ~isDone(trigread); sound=trigread();trigwrite(sound);end;reset(trigread);reset(trigwrite);
-    toc(psTime);
-    pause(expParams.timeScan(1));
-    fprintf('\nPrescans complete\n\n');
-elseif expParams.scan && expParams.prescan && CMRR
-    fprintf('\nStarting prescans\n');
-    psTime = tic;
-    fprintf('\nPrescan 1, duration %.2f seconds\n', expParams.ipatDur);
-    %play(triggerPlayer)
-    while ~isDone(trigread); sound=trigread();trigwrite(sound);end;reset(trigread);reset(trigwrite);
-    toc(psTime);
-    pause(expParams.ipatDur+0.1);
-    fprintf('\nPrescan 2, duration %.2f seconds\n', expParams.ipatDur);
-    %play(triggerPlayer)
-    while ~isDone(trigread); sound=trigread();trigwrite(sound);end;reset(trigread);reset(trigwrite);
-    toc(psTime);
-    pause(expParams.ipatDur);
-    fprintf('\nPrescan 3, duration %.2f seconds\n', expParams.ipatDur);
-    %play(triggerPlayer)
-    while ~isDone(trigread); sound=trigread();trigwrite(sound);end;reset(trigread);reset(trigwrite);
-    toc(psTime);
-    pause(expParams.ipatDur);
-    fprintf('\nPrescan 4, duration %.2f seconds\n', expParams.smsDur);
-    %play(triggerPlayer)
-    while ~isDone(trigread); sound=trigread();trigwrite(sound);end;reset(trigread);reset(trigwrite);
-    toc(psTime);
-    pause(expParams.smsDur);
-    fprintf('\nPrescan dummy scan 1, duration %.2f seconds\n', expParams.timeScan(1));
-    %play(triggerPlayer)
-    while ~isDone(trigread); sound=trigread();trigwrite(sound);end;reset(trigread);reset(trigwrite);
-    toc(psTime);
-    pause(expParams.timeScan(1)+0.1);
-    fprintf('\nPrescan dummy scan 2, duration %.2f seconds\n', expParams.timeScan(1));
-    %play(triggerPlayer)
-    while ~isDone(trigread); sound=trigread();trigwrite(sound);end;reset(trigread);reset(trigwrite);
-    toc(psTime);
-    pause(expParams.timeScan(1)+0.1);
-    fprintf('\nPrescans complete\n\n');
-end
+
 pause(1);
 save(Output_name, 'expParams');
 
@@ -628,7 +586,7 @@ CLOCK=[];                               % Main clock (not yet started)
 expParams.timeNULL = expParams.timeMax(1) + diff(expParams.timeMax).*rand;
 intvs = [];
 
-%% LOOP OVER TRIALS
+
 
 if is_dbs_run
     %%% send signal to percept here
@@ -636,7 +594,7 @@ if is_dbs_run
     repeat_beacon = 1;
     beacon_times = []; 
     % >>> ZY mod: moved outside of while-loop, so all events saved correctly
-    beacon_times_fname = fullfile(filepath,sprintf('sub-%s_ses-%d_run-%d_task-%s_beacon-times.mat',expParams.subject, expParams.session, expParams.run, expParams.task));
+    beacon_times_fname = fullfile(taskpath,sprintf('sub-%s_ses-%d_run-%d_task-%s_beacon-times.mat',expParams.subject, expParams.session, expParams.run, expParams.task));
     %<<<
     while repeat_beacon
         beacon_times = [beacon_times, test_Beacon(0.4,0.05,5)];
@@ -657,18 +615,20 @@ figTC=taskControlGUI_release(taskState);
 % # Initialize EvtTime
 if FLAG_SEND_EVENT_STIM_ONSET
     evt = []; evtCode = [];
-    taskEvent_fname = fullfile(filepath,sprintf('sub-%s_ses-%d_run-%d_task-%s_taskEvents.mat',...
+    taskEvent_fname = fullfile(taskpath,sprintf('sub-%s_ses-%d_run-%d_task-%s_taskEvents.mat',...
         expParams.subject, expParams.session, expParams.run, expParams.task));
 end
 %<<<
-for itrial = starting_trial:expParams.numTrials
+
+%% Main trial loop
+for itrial = starting_trial:op.ntrials
 
     % set up trial (see subfunction at end of script)
     %[trialData, annoStr] = setUpTrial(expParams, annoStr, stimName, condition, trialData, ii);
     % print progress to window
-    fprintf('\nRun %d, trial %d/%d\n', expParams.run, itrial, expParams.numTrials);
+    fprintf('\nRun %d, trial %d/%d\n', expParams.run, itrial, op.ntrials);
 
-    if (mod(itrial,ntrials_between_breaks) == 0) && (itrial ~= expParams.numTrials)  % Break after every X trials  , but not on the last
+    if (mod(itrial,ntrials_between_breaks) == 0) && (itrial ~= op.ntrials)  % Break after every X trials  , but not on the last
         pause()
 
         if is_dbs_run
@@ -707,12 +667,13 @@ for itrial = starting_trial:expParams.numTrials
     %<<<
     %
     set(annoStr.Plus, 'Visible','on');
-    trialData(itrial).stimName = Input_files{itrial};
-    trialData(itrial).condLabel = Input_conditions{itrial};
-    [fp, nm, ext] = fileparts(Input_files{itrial});
-    trialData(itrial).display = upper(nm);
-    if strcmp(trialData(itrial).display, 'NULL'); trialData(itrial).display = 'yyy'; end
-%     trialData(ii).timeStim = numel(Input_sound{ii})/Input_fs{ii}; 
+    trialData(itrial).stimName = trials.name{itrial};
+    trialData(itrial).display = trials.name{itrial};
+    
+                        trialData(itrial).condLabel = Input_conditions{itrial};
+    
+                        if strcmp(trialData(itrial).display, 'NULL'); trialData(itrial).display = 'yyy'; end
+                        %     trialData(ii).timeStim = numel(Input_sound{ii})/Input_fs{ii}; 
     trialData(itrial).timeStim = size(Input_sound{itrial},1)/Input_fs{itrial}; 
     trialData(itrial).timePostStim = expParams.timePostStim(1) + diff(expParams.timePostStim).*rand; 
     trialData(itrial).timePostOnset = expParams.timePostOnset(1) + diff(expParams.timePostOnset).*rand; 
@@ -723,15 +684,16 @@ for itrial = starting_trial:expParams.numTrials
     trialData(itrial).timePreSound = expParams.timePreSound;
     %stimPlayer = audioplayer(Input_sound{ii},Input_fs{ii}, 24, stimID);
     stimread = stimreads{itrial};
-    SpeechTrial=~strcmp(trialData(itrial).condLabel,'NULL');
-%     SpeechTrial=~strcmp(trialData(ii).condLabel,'S');
+                            SpeechTrial=~strcmp(trialData(itrial).condLabel,'NULL');
+                        %     SpeechTrial=~strcmp(trialData(ii).condLabel,'S');
 
     % set up variables for audio recording and voice detection
-    prepareScan=0.250*(expParams.scan~=0); % if scanning, end recording 250ms before scan trigger
-    recordLen= trialData(itrial).timeMax-prepareScan; % max total recording time
-    recordLenNULL = expParams.timeNULL-prepareScan;
+    % % % % % % % prepareScan=0.250*(expParams.scan~=0); % if scanning, end recording 250ms before scan trigger
+    prepareScan = 0; 
+    % % % % % % % % % % % % recordLen= trialData(itrial).timeMax-prepareScan; % max total recording time
+    % % % % % % % % % % % % recordLenNULL = expParams.timeNULL-prepareScan;
     nSamples = ceil(recordLen*expParams.sr);
-    nSamplesNULL = ceil(recordLenNULL*expParams.sr);
+    % % % % % % % % % % % % % % % % % nSamplesNULL = ceil(recordLenNULL*expParams.sr);
     time = 0:1/expParams.sr:(nSamples-1)/expParams.sr;
     recAudio = zeros(nSamples,1);       % initialize variable to store audio
     nMissingSamples = 0;                % cumulative n missing samples between frames
@@ -779,20 +741,12 @@ for itrial = starting_trial:expParams.numTrials
     ok=ManageTime('wait', CLOCK, TIME_STIM_START);
     TIME_STIM_ACTUALLYSTART = ManageTime('current', CLOCK);
     
-    if strcmp(expParams.visual, 'figure')
-        set(annoStr.Plus, 'Visible','off');
-        imshow(imgBuf{figureseq{itrial}}, 'Parent', annoStr.Pic);
 
-        %%%%%%% AM added this condition 'drawnow' 2023/12/6 to fix the fact that fig wasn't appearing at stim onset..... may be caused by only using 1 monitor
-        if ~show_mic_trace_figure
-            drawnow; 
-        end
-    elseif strcmp(expParams.visual, 'orthography')
         set(annoStr.Plus, 'Visible','off');
         set(annoStr.Stim, 'String', {trialData(itrial).display});
         set(annoStr.Stim, 'Visible','on');
         drawnow;
-    end
+
     if ~ok, fprintf('i am late for this trial TIME_STIM_START\n'); end
 
     TIME_SOUND_START = TIME_STIM_ACTUALLYSTART + trialData(itrial).timePreSound;
@@ -838,11 +792,17 @@ for itrial = starting_trial:expParams.numTrials
     if strcmp(expParams.visual, 'orthography'),set(annoStr.Plus, 'color','g');drawnow;end
     if ~ok, fprintf('i am late for this trial TIME_GOSIGNAL_START\n'); end
     TIME_VOICE_START = TIME_GOSIGNAL_ACTUALLYSTART + nonSpeechDelay;                   % expected voice onset time
-    TIME_SCAN_START = TIME_GOSIGNAL_ACTUALLYSTART + SpeechTrial * trialData(itrial).timeMax + (1-SpeechTrial)*expParams.timeNULL;
 
 
-    endSamples = SpeechTrial * nSamples + (1-SpeechTrial)*nSamplesNULL;
-    while endIdx < endSamples
+                % % % % % % % TIME_SCAN_START = TIME_GOSIGNAL_ACTUALLYSTART + SpeechTrial * trialData(itrial).timeMax + (1-SpeechTrial)*expParams.timeNULL;
+
+    TIME_SCAN_START = TIME_GOSIGNAL_ACTUALLYSTART + trialData(itrial).timeMax;
+
+
+                % % % % % endSamples = SpeechTrial * nSamples + (1-SpeechTrial)*nSamplesNULL;
+
+
+    while endIdx < nSamples
         % find beginning/end indices of frame
         begIdx = (frameCount*expParams.frameLength)-(expParams.frameLength-1) + nMissingSamples;
         endIdx = (frameCount*expParams.frameLength) + nMissingSamples;
@@ -864,7 +824,7 @@ for itrial = starting_trial:expParams.numTrials
         minVoiceOnsetTime = max(0, expParams.minVoiceOnsetTime-(begIdx+numOverrun)/expParams.sr);
         
         % detect beep onset
-        if SpeechTrial && beepDetected == 0 && expParams.minVoiceOnsetTime > (begIdx+numOverrun)/expParams.sr
+        if beepDetected == 0 && expParams.minVoiceOnsetTime > (begIdx+numOverrun)/expParams.sr
             % look for beep onset
             [beepDetected, bTime, beepOnsetState]  = detectVoiceOnset(recAudio(begIdx+numOverrun:endIdx+numOverrun), expParams.sr, expParams.rmsThreshTimeOnset, rmsBeepThresh, 0, beepOnsetState);
             if beepDetected
@@ -873,7 +833,7 @@ for itrial = starting_trial:expParams.numTrials
                     set(micLineB,'value',beepTime,'visible','on');
                  end
             end
-        elseif SpeechTrial && voiceOnsetDetected == 0,% && frameCount > onsetWindow/frameDur
+        elseif voiceOnsetDetected == 0,% && frameCount > onsetWindow/frameDur
             if ~beepDetected; 
                 beepTime = 0; 
                 % disp('Beep not detected. Assign beepTime = 0.'); % this warning needs to be moved - it prints endlessly until speech onset
@@ -890,7 +850,7 @@ for itrial = starting_trial:expParams.numTrials
                 nonSpeechDelay = .5*nonSpeechDelay + .5*voiceOnsetTime;  % running-average of voiceOnsetTime values, with alpha-parameter = 0.5 (nonSpeechDelay = alpha*nonSpeechDelay + (1-alph)*voiceOnsetTime; alpha between 0 and 1; alpha high -> slow update; alpha low -> fast update)
                 TIME_SCAN_START =  TIME_VOICE_START + trialData(itrial).timePostOnset;
                 nSamples = min(nSamples, ceil((TIME_SCAN_START-TIME_GOSIGNAL_ACTUALLYSTART-prepareScan)*expParams.sr)); % ends recording 250ms before scan time (or timeMax if that is earlier)
-                endSamples = nSamples;
+                % % % % % % % % % % % % % % % endSamples = nSamples;
                 % add voice onset to plot
                 if show_mic_trace_figure
                     set(micLine,'value',voiceOnsetTime + beepTime,'visible','on');
@@ -905,14 +865,12 @@ for itrial = starting_trial:expParams.numTrials
         frameCount = frameCount+1;
 
     end
-    if SpeechTrial && voiceOnsetDetected == 0, fprintf('warning: voice was expected but not detected (rmsThresh = %f)\n',rmsThresh); end
+    if oiceOnsetDetected == 0, fprintf('warning: voice was expected but not detected (rmsThresh = %f)\n',rmsThresh); end
     release(deviceReader); % end recording
     
     switch expParams.visual
         case 'fixpoint'
             set(annoStr.Plus, 'color','w');
-        case 'figure'
-            imshow([], 'Parent', annoStr.Pic);
         case 'orthography'
             set(annoStr.Plus, 'color','w');
     end
@@ -935,60 +893,43 @@ for itrial = starting_trial:expParams.numTrials
         trialData(itrial).nonSpeechDelay = NaN;
     end
 
-    if expParams.scan % note: THIS IS TIME LANDMARK #2: BEGINNING OF SCAN: if needed consider placing this below some or all the plot/save operations below (at this point the code will typically wait for at least ~2s, between the end of the recording to the beginning of the scan)
-        %ok = ManageTime('wait', CLOCK, TIME_SCAN_START - trigoffset);
-        ok = ManageTime('wait', CLOCK, TIME_SCAN_START);
-        %playblocking(triggerPlayer);
-        while ~isDone(trigread); sound=trigread();trigwrite(sound);end;reset(trigread);reset(trigwrite);
-        %TIME_TRIG_RELEASED=ManageTime('current', CLOCK);
-        TIME_SCAN_ACTUALLYSTART=ManageTime('current', CLOCK);
-        TIME_SCAN_END = TIME_SCAN_ACTUALLYSTART + trialData(itrial).timeScan;
-        NEXTTRIAL = TIME_SCAN_END + trialData(itrial).timePreStim;
-        if ~ok, fprintf('i am late for this trial TIME_SCAN_START\n'); end
-        
-        if SpeechTrial; intvs = [intvs TIME_SCAN_START - TIME_GOSIGNAL_START]; expParams.timeNULL = mean(intvs); end
-
-        if isnan(trialData(itrial).voiceOnsetTime)
-            expdur = trialData(itrial).timePreSound + trialData(itrial).timeStim + trialData(itrial).timePostSound +  trialData(itrial).timePostStim + trialData(itrial).timeMax + trialData(itrial).timeScan;
-        else
-            expdur = trialData(itrial).timePreSound + trialData(itrial).timeStim + trialData(itrial).timePostSound +  trialData(itrial).timePostStim + trialData(itrial).voiceOnsetTime + trialData(itrial).timePostOnset + trialData(itrial).timeScan;
-        end
-        fprintf('\nThis trial elapsed Time: %.3f (s), expected duration: %.3f (s)\n', TIME_SCAN_END - TIME_STIM_START, expdur);
-    else
+    % % % % % % % % % % if expParams.scan % note: THIS IS TIME LANDMARK #2: BEGINNING OF SCAN: if needed consider placing this below some or all the plot/save operations below (at this point the code will typically wait for at least ~2s, between the end of the recording to the beginning of the scan)
+    % % % % % % % % % %     %ok = ManageTime('wait', CLOCK, TIME_SCAN_START - trigoffset);
+    % % % % % % % % % %     ok = ManageTime('wait', CLOCK, TIME_SCAN_START);
+    % % % % % % % % % %     %playblocking(triggerPlayer);
+    % % % % % % % % % %     while ~isDone(trigread); sound=trigread();trigwrite(sound);end;reset(trigread);reset(trigwrite);
+    % % % % % % % % % %     %TIME_TRIG_RELEASED=ManageTime('current', CLOCK);
+    % % % % % % % % % %     TIME_SCAN_ACTUALLYSTART=ManageTime('current', CLOCK);
+    % % % % % % % % % %     TIME_SCAN_END = TIME_SCAN_ACTUALLYSTART + trialData(itrial).timeScan;
+    % % % % % % % % % %     NEXTTRIAL = TIME_SCAN_END + trialData(itrial).timePreStim;
+    % % % % % % % % % %     if ~ok, fprintf('i am late for this trial TIME_SCAN_START\n'); end
+    % % % % % % % % % % 
+    % % % % % % % % % %     if SpeechTrial; intvs = [intvs TIME_SCAN_START - TIME_GOSIGNAL_START]; expParams.timeNULL = mean(intvs); end
+    % % % % % % % % % % 
+    % % % % % % % % % %     if isnan(trialData(itrial).voiceOnsetTime)
+    % % % % % % % % % %         expdur = trialData(itrial).timePreSound + trialData(itrial).timeStim + trialData(itrial).timePostSound +  trialData(itrial).timePostStim + trialData(itrial).timeMax + trialData(itrial).timeScan;
+    % % % % % % % % % %     else
+    % % % % % % % % % %         expdur = trialData(itrial).timePreSound + trialData(itrial).timeStim + trialData(itrial).timePostSound +  trialData(itrial).timePostStim + trialData(itrial).voiceOnsetTime + trialData(itrial).timePostOnset + trialData(itrial).timeScan;
+    % % % % % % % % % %     end
+    % % % % % % % % % %     fprintf('\nThis trial elapsed Time: %.3f (s), expected duration: %.3f (s)\n', TIME_SCAN_END - TIME_STIM_START, expdur);
+    % % % % % % % % % % else
         TIME_SCAN_ACTUALLYSTART=nan;
         %TIME_TRIG_RELEASED = nan;
         TIME_SCAN_END = nan;
         NEXTTRIAL = TIME_SCAN_START + trialData(itrial).timePreStim;
-    end
+    % % % % % % % % % % % % % % % % end
         
-    trialData(itrial).timingTrial = [TIME_TRIAL_START;TIME_STIM_START;TIME_STIM_ACTUALLYSTART;TIME_SOUND_START;TIME_SOUND_ACTUALLYSTART;TIME_SOUND_END;TIME_ALLSTIM_END;TIME_GOSIGNAL_START;TIME_GOSIGNAL_ACTUALLYSTART;TIME_VOICE_START;TIME_SCAN_START;TIME_SCAN_ACTUALLYSTART;TIME_SCAN_END];
-    expParams.timingTrialNames = split('TIME_TRIAL_START;TIME_STIM_START;TIME_STIM_ACTUALLYSTART;TIME_SOUND_START;TIME_SOUND_ACTUALLYSTART;TIME_SOUND_END;TIME_ALLSTIM_END;TIME_GOSIGNAL_START;TIME_GOSIGNAL_ACTUALLYSTART;TIME_VOICE_START;TIME_SCAN_START;TIME_SCAN_ACTUALLYSTART;TIME_SCAN_END', ';');
+    trialData(itrial).timingTrial =    [TIME_TRIAL_START;TIME_STIM_START;TIME_STIM_ACTUALLYSTART;TIME_SOUND_START;TIME_SOUND_ACTUALLYSTART;TIME_SOUND_END;TIME_ALLSTIM_END;TIME_GOSIGNAL_START;TIME_GOSIGNAL_ACTUALLYSTART;TIME_VOICE_START];
+    expParams.timingTrialNames = split('TIME_TRIAL_START;TIME_STIM_START;TIME_STIM_ACTUALLYSTART;TIME_SOUND_START;TIME_SOUND_ACTUALLYSTART;TIME_SOUND_END;TIME_ALLSTIM_END;TIME_GOSIGNAL_START;TIME_GOSIGNAL_ACTUALLYSTART;TIME_VOICE_START', ';');
 
     TIME_STIM_START = NEXTTRIAL; 
 
 
-    % DON'T adapt rmsThresh
-%     if 1, %isfield(expParams,'voiceCal')&&expParams.voiceCal.threshType == 1
-%         if SpeechTrial   % If the current trial is not a baseline trial
-%             rmsFF=.90; winDur=.002; winSize=ceil(winDur*expParams.sr); % note: match rmsFF and rmsFrameDur values to those in detectVoiceOnset.m
-%             rms=sqrt(mean(reshape(recAudio(1:floor(nSamples/winSize)*winSize),winSize,[]).^2,1));
-%             rms=filter(1,[1 -rmsFF],(1-rmsFF)*rms); % note: just like "rms(1)=0+(1-rmsFF)*rms(1); for n=2:numel(rms), rms(n)=rmsFF*rms(n-1)+(1-rmsFF)*rms(n); end"
-%             if  voiceOnsetDetected    % voice onset detected
-%                 minRms = prctile(rms,10);
-%                 maxRms = prctile(rms(max(1,ceil(voiceOnsetTime/winDur)):end),90);
-%             else
-%                 minRms = 0;
-%                 maxRms = prctile(rms,90);
-%             end
-%             tmpRmsThresh = minRms + (maxRms-minRms)/10;
-%             rmsThresh = .9*rmsThresh + .1*tmpRmsThresh
-%         end
-%     end
 
     %% save for each trial
     trialData(itrial).s = recAudio(1:nSamples);
     trialData(itrial).fs = expParams.sr;
-    if SpeechTrial&&voiceOnsetDetected, trialData(itrial).reference_time = voiceOnsetTime;
+    if voiceOnsetDetected, trialData(itrial).reference_time = voiceOnsetTime;
     else trialData(itrial).reference_time = nonSpeechDelay;
     end
     trialData(itrial).percMissingSamples = (nMissingSamples/(recordLen*expParams.sr))*100;
@@ -999,11 +940,11 @@ for itrial = starting_trial:expParams.numTrials
 
     % fName_trial will be used for individual trial files (which will
     % live in the run folder)
-    fName_trial = fullfile(filepath,sprintf('sub-%s_ses-%d_run-%d_task-%s_trial-%d.mat',expParams.subject, expParams.session, expParams.run, expParams.task,itrial));
+    fName_trial = fullfile(taskpath,sprintf('sub-%s_ses-%d_run-%d_task-%s_trial-%d.mat',expParams.subject, expParams.session, expParams.run, expParams.task,itrial));
     save(fName_trial,'tData');
 
     if require_keypress_every_trial
-        if itrial ~= expParams.numTrials
+        if itrial ~= op.ntrials
             fprintf('\n Press any key to proceed to next trial \n')
         end
         
@@ -1014,10 +955,7 @@ end
 
 release(headwrite);
 release(beepread);
-if expParams.scan
-    release(trigwrite);
-    release(trigread);
-end
+
 
 
 %% end of experiment
@@ -1029,13 +967,13 @@ fprintf('\nElapsed Time: %f (min)\n', expParams.elapsed_time)
 save(Output_name, 'expParams', 'trialData');
 
 % number of trials with voice onset detected
-onsetCount = nan(expParams.numTrials,1);
-for j = 1: expParams.numTrials
+onsetCount = nan(op.ntrials,1);
+for j = 1: op.ntrials
     onsetCount(j) = trialData(j).onsetDetected;
 end
 numOnsetDetected = sum(onsetCount);    
 
-fprintf('Voice onset detected on %d/%d trials\n', numOnsetDetected, expParams.numTrials);
+fprintf('Voice onset detected on %d/%d trials\n', numOnsetDetected, op.ntrials);
 
 fprintf('Press any key to send final sync pulses and end this experimental phase')
 pause()
