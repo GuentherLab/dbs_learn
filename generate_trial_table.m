@@ -70,7 +70,7 @@ stim_master = readtable(op.stim_master_file,'FileType','text');
 
 
 if op.task == "famil" || op.task == "assess" % if familiarization or assessment phase, just take the exact listed stim in order
-    trials = stim_master(stim_master.stim_group == string(op.task), : )
+    trials = stim_master(stim_master.stim_group == string(op.task), : );
 else % for training/testing, stim list needs to be sorted / multiplied / shuffled 
     trials = table; 
 

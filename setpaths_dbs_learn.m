@@ -1,6 +1,9 @@
 %%% set matlab paths for DBS-Multisyllabic experiment 
 
-paths.data  = 'C:\dbsmulti'; 
+
+%% ADD MONKEYLOGIC TO DBSLEARN REPO AND ADD TO THIS SCRIPT
+
+paths.data  = 'C:\dbs_learn_data'; 
     paths.groupanalysis = [paths.data, filesep, 'groupanalysis']; 
 paths.code = 'C:\docs\code'; 
     paths.code_dbs_learn = [paths.code, filesep, 'dbs_learn']; 
@@ -26,7 +29,7 @@ end
     [paths.code_dbs_learn, filesep, 'config'];...
     [paths.code_dbs_learn, filesep, 'NIMH_daqtoolbox_(Apr-7-2016)'];... % needed for sending beacon
     paths.spm;... %%%% use version of spm in fieldtrip
-    paths.bml;...
+    % paths.bml;...
     paths.fieldtrip_toolbox;...
 };
 
@@ -34,8 +37,6 @@ end
 
 bml_defaults()
 % ft_defaults()
-
-addpath('C:\Users\amsmeier\Downloads\NIMH_MonkeyLogic_2.2')
 
 
 set(0,'defaulttextInterpreter','none') 
