@@ -1,12 +1,8 @@
-% main script for running DBS-Multisyllabic experiment
-%   first, run setup_subj_DBSMulti_fam_assess.m or setup_subj_DBSMulti_train_test.m to create stim table
+% main script for running DBS-Learn multisyllabic and subsyllabic experiments
 %   after starting this script, select appropriate config file for the experimental phase you intend to run
 
 
-function flvoice_run(varargin)
-
-% stimset = 'multisyl';
-stimset = 'subsyl';
+function dbs_learn_run_exp(op)
 
 show_mic_trace_figure = 0; % if false, make mic trace figure invisible
 
@@ -101,53 +97,11 @@ close all force
 %       deviceScan                  : device name for scanner trigger (see audiodevinfo().output.Name for details)
 %
 
-paths = struct; paths_to_add = struct; setpaths_dbs_learn();
+paths = struct; setpaths_dbs_learn();
 
 %% audio device setup
-[~,computername] = system('hostname'); % might not work on non-windows machines
-    computername = deblank(computername); 
-auddevs = audiodevinfo; 
-    auddevs_in = {auddevs.input.Name};
-    auddevs_out = {auddevs.output.Name};
-
- % default device names do not have to be full device names, just need to be included in a single device name
-if any(contains(auddevs_out,'Focusrite') )  % Full experimental setup with Focusrite... only available at BU lab, not MGH
-        default_audio_in = 'Focusrite';
-        default_audio_out = 'Focusrite';
-elseif any(contains(auddevs_out,'Speakers (Logitech G432 Gaming Headset)') ) % this name might instead be 'Speakers (G432 Gaming Headset)' if GHub is not installed
-    % if G432 is available, use it for input and output...
-    % .... if using Eprom instead, use 3.5mm jack  
-    default_audio_in = 'Microphone (Logitech G432 Gaming Headset)';
-    default_audio_out = 'Speakers (Logitech G432 Gaming Headset)'; 
-else
-    switch computername
-        case '677-GUE-WL-0010'  % AM work laptop - Thinkpad X1
-            if any(contains(auddevs_out,'Headphones (WF-C500)') ) % if using bluetooth headphones
-
-                default_audio_in = 'Default';
-                default_audio_out = 'Headphones (WF-C500)'; 
-                    % default_audio_out = 'Headset (WF-C500)'; 
-            else % Thinkpad X1 without headphones
-                default_audio_in = 'Microphone'; 
-                default_audio_out = 'Realtek'; 
-                    % default_audio_out = 'ARZOPA'; % portable screen speakers
-            end
-        case {'MSI','amsmeier'} % AM personal laptop
-            if any(contains(auddevs_in, 'EEPROM')) % wired headset - usb input
-                default_audio_in = 'EEPROM'; 
-                default_audio_out = 'Realtek HD Audio 2nd'; % if this usb input is being used, output will be via (backmost) 3.5mm jack
-            elseif any(contains(auddevs_out,'MP43250') )   % if using bluetooth headphones
-                default_audio_ing = 'MP43250'; 
-                default_audio_out = 'MP43250'; 
-            else
-                default_audio_in = 'Microphone (Realtek(R) Audio)';    % onboard mic
-                % default_audio_out = 'Speakers (Realtek(R) Audio)'; % use default output - onboard speakers
-                default_audio_out = 'Headphones (Realtek(R) Audio)'; 
-            end
-        otherwise 
-            error('unknown computer; please add preferred devices to "audio device section" of flvoice_run.m')
-    end
-end
+% modify the below function based on the task computer and audio devices you are using
+aud = setup_audio_devices(); 
 
 %%
 ET = tic;
@@ -162,86 +116,111 @@ else
     default_fontsize = 15;
 end
 
-preFlag = false;
-expRead = {};
-presfig=dialog('units','norm','position',[.3,.3,.3,.1],'windowstyle','normal','name','Load preset parameters','color','w','resize','on');
-uicontrol(presfig,'style','text','units','norm','position',[.05, .475, .6, .35],'string','Select preset exp config file (.json):','backgroundcolor','w','fontsize',default_fontsize-2,'fontweight','bold','horizontalalignment','left');
-prePath=uicontrol('Style', 'edit','Units','norm','FontUnits','norm','FontSize',0.5,'HorizontalAlignment', 'left','Position',[.55 .55 .3 .3],'Parent',presfig);
-preBrowse=uicontrol('Style', 'pushbutton','String','Browse','Units','norm','FontUnits','norm','FontSize',0.5,'Position',[.85 .55 .15 .3],'Parent',presfig, 'Callback',@preCall1);
-preConti=uicontrol('Style', 'pushbutton','String','Continue','Units','norm','FontUnits','norm','FontSize',0.5,'Position',[.3 .12 .15 .3],'Parent',presfig, 'Callback',@preCall2);
-preSkip=uicontrol('Style', 'pushbutton','String','Skip','Units','norm','FontUnits','norm','FontSize',0.5,'Position',[.55 .12 .15 .3],'Parent',presfig, 'Callback','uiresume');
+% % % % preFlag = false;
+% % % % expRead = {};
+% % % % presfig=dialog('units','norm','position',[.3,.3,.3,.1],'windowstyle','normal','name','Load preset parameters','color','w','resize','on');
+% % % % uicontrol(presfig,'style','text','units','norm','position',[.05, .475, .6, .35],'string','Select preset exp config file (.json):','backgroundcolor','w','fontsize',default_fontsize-2,'fontweight','bold','horizontalalignment','left');
+% % % % prePath=uicontrol('Style', 'edit','Units','norm','FontUnits','norm','FontSize',0.5,'HorizontalAlignment', 'left','Position',[.55 .55 .3 .3],'Parent',presfig);
+% % % % preBrowse=uicontrol('Style', 'pushbutton','String','Browse','Units','norm','FontUnits','norm','FontSize',0.5,'Position',[.85 .55 .15 .3],'Parent',presfig, 'Callback',@preCall1);
+% % % % preConti=uicontrol('Style', 'pushbutton','String','Continue','Units','norm','FontUnits','norm','FontSize',0.5,'Position',[.3 .12 .15 .3],'Parent',presfig, 'Callback',@preCall2);
+% % % % preSkip=uicontrol('Style', 'pushbutton','String','Skip','Units','norm','FontUnits','norm','FontSize',0.5,'Position',[.55 .12 .15 .3],'Parent',presfig, 'Callback','uiresume');
 
-uiwait(presfig);
-ok=ishandle(presfig);
-if ~ok, return; end
+% % % % uiwait(presfig);
+% % % % ok=ishandle(presfig);
+% % % % if ~ok, return; end
 
-function preCall1(varargin)
-    [fileName, filePath] = uigetfile([paths.config, filesep, '*.json'], 'Select .json file');
-    fileFull = [filePath fileName];
-    if isequal(fileName,0)
-        return
-    else
-        set(prePath, 'String', fileFull);
-    end
-end
+% % % % function preCall1(varargin)
+% % % %     [fileName, filePath] = uigetfile([paths.config, filesep, '*.json'], 'Select .json file');
+% % % %     fileFull = [filePath fileName];
+% % % %     if isequal(fileName,0)
+% % % %         return
+% % % %     else
+% % % %         set(prePath, 'String', fileFull);
+% % % %     end
+% % % % end
 
-function preCall2(varargin)
-    path = get(prePath, 'String');
-    assert(~isempty(dir(path)), 'unable to find input file %s',path);
-    if ~isempty(dir(path))
-        expRead=spm_jsonread(path);
-        uiresume;
-        preFlag = true;
-    end
-end
+% % % % function preCall2(varargin)
+% % % %     path = get(prePath, 'String');
+% % % %     assert(~isempty(dir(path)), 'unable to find input file %s',path);
+% % % %     if ~isempty(dir(path))
+% % % %         expRead=spm_jsonread(path);
+% % % %         uiresume;
+% % % %         preFlag = true;
+% % % %     end
+% % % % end
 
-delete(presfig);
+% % % % % delete(presfig);
 
-% create structure to save experimental parameters
-if preFlag
-    expParams = expRead;
-else % if no preset config file defined
-    expParams=struct(...
-        'visual', 'orthography', ...
-        'root', pwd, ...
-        'audiopath', fullfile(pwd, 'stimuli', ['audio-',stimset]), ...
-        'figurespath', fullfile(pwd, 'stimuli', 'figures', 'Adults'), ...
-        'subject','TEST01',...
-        'session', 1, ...
-        'run', 1,...
-        'task', 'test', ...
-        'gender', 'unspecified', ...
-        'timePostStim', [.25 .75],...
-        'timePostOnset', 4.5,...
-        % % % % % % % % % % 'timeScan', 1.6,...
-        'timePreStim', .25,...
-        'timeMax', 5.5, ...
-        'timePreSound', .5, ...
-        'timePostSound', .47, ...
-        'rmsThresh', .02,... %'rmsThresh', .05,...
-        'rmsBeepThresh', .1,...
-        'rmsThreshTimeOnset', .02,...% 'rmsThreshTimeOnset', .10,...
-        'rmsThreshTimeOffset', [.25 .25],...
-        'minVoiceOnsetTime', 0.4, ...
-        % % % % % % % % % 'ipatDur', 4.75,...         %   prescan IPAT duration
-        % % % % % % % % % 'smsDur', 7,...             %   prescan SMS duration
-        'deviceMic','',...
-        'deviceHead','',...
+                    % % create structure to save experimental parameters
+                    % if preFlag
+                    %     expParams = expRead;
+                    % else % if no preset config file defined
+                    %     expParams=struct(...
+                    %         'visual', 'orthography', ...
+                    %         'root', pwd, ...
+                    %         'audiopath', fullfile(pwd, 'stimuli', ['audio-',stimset]), ...
+                    %         'subject','TEST01',...
+                    %         'session', 1, ...
+                    %         'run', 1,...
+                    %         'task', 'test', ...
+                    %         'gender', 'unspecified', ...
+                    %         'timePostStim', [.25 .75],...
+                    %         'timePostOnset', 4.5,...
+                    %         'timePreStim', .25,...
+                    %         'timeMax', 5.5, ...
+                    %         'timePreSound', .5, ...
+                    %         'timePostSound', .47, ...
+                    %         'rmsThresh', .02,... %'rmsThresh', .05,...
+                    %         'rmsBeepThresh', .1,...
+                    %         'rmsThreshTimeOnset', .02,...% 'rmsThreshTimeOnset', .10,...
+                    %         'rmsThreshTimeOffset', [.25 .25],...
+                    %         'minVoiceOnsetTime', 0.4, ...
+                    %         'deviceMic','',...
+                    %         'deviceHead','',...
+                    %         )
+                    % end
 
-end
+
+expParams = op; 
+
+field_default('expParams','ses','subsyl'), 
+field_default('expParams','visual', 'orthography'), 
+field_default('expParams','root', pwd), 
+% field_default('expParams','audiopath', fullfile(pwd, 'stimuli', ['audio-',stimset])), 
+field_default('expParams','subject','TEST01'), 
+field_default('expParams','session', 1), 
+field_default('expParams','run', 1), 
+field_default('expParams','task', 'test'), 
+field_default('expParams','gender', 'unspecified'), 
+field_default('expParams','timePostStim', [.25 .75]), 
+field_default('expParams','timePostOnset', 4.5), 
+field_default('expParams','timePreStim', .25), 
+field_default('expParams','timeMax', 5.5), 
+field_default('expParams','timePreSound', .5), 
+field_default('expParams','timePostSound', .47), 
+field_default('expParams','rmsThresh', .02),  %'rmsThresh', .05,
+field_default('expParams','rmsBeepThresh', .1), 
+field_default('expParams','rmsThreshTimeOnset', .02), % 'rmsThreshTimeOnset', .10,
+field_default('expParams','rmsThreshTimeOffset', [.25 .25]), 
+field_default('expParams','minVoiceOnsetTime', 0.4), 
+field_default('expParams','deviceMic',''), 
+field_default('expParams','deviceHead','')             
+
+[trials, op] = generate_trial_table(op); 
 
 expParams.computer = host;
 paths.audio_stim_ses = [paths.code_dbs_learn, filesep, 'stimuli', filesep, 'audio-',op.ses]; 
+paths.audio_stim_task = [paths.audio_stim_ses, filesep, op.task]; % contains the main audio stim files for this task
 
-for n=1:2:numel(varargin)-1, 
-    assert(isfield(expParams,varargin{n}),'unrecognized option %s',varargin{n});
-    expParams.(varargin{n})=varargin{n+1};
-end
+% % % % % % % % for n=1:2:numel(varargin)-1, 
+% % % % % % % %     assert(isfield(expParams,varargin{n}),'unrecognized option %s',varargin{n});
+% % % % % % % %     expParams.(varargin{n})=varargin{n+1};
+% % % % % % % % end
 
-try, a=audioDeviceReader('Device','asdf'); 
-catch me; str=regexp(regexprep(me.message,'.*Valid values are:',''),'"([^"]*)"','tokens'); 
-    strINPUT=[str{:}]; 
-end
+% % % % % % % % try, a=audioDeviceReader('Device','asdf'); 
+% % % catch me; str=regexp(regexprep(me.message,'.*Valid values are:',''),'"([^"]*)"','tokens'); 
+% % %     strINPUT=[str{:}]; 
+% % % end
 
 audiodevreset;
 info=audiodevinfo;
@@ -251,147 +230,147 @@ catch me; str=regexp(regexprep(me.message,'.*Valid values are:',''),'"([^"]*)"',
     strOUTPUT=[str{:}]; 
 end;
 
-% Look for default input and output indices
-if contains(default_audio_in,'Focusrite')
-    ipind = find(contains(strINPUT, 'Analogue')&contains(strINPUT, default_audio_in));
-    opind = find(contains(strOUTPUT, 'Speakers')&contains(strOUTPUT, default_audio_out));
-    tgind = find(contains(strOUTPUT, 'Playback')&contains(strOUTPUT, default_audio_out));
-else
-    ipind = find(contains(strINPUT, default_audio_in));
-    opind = find(contains(strOUTPUT, default_audio_out));
-    tgind = find(contains(strOUTPUT, default_audio_out));
-end
+% % % % % % Look for default input and output indices
+% % % % % if contains(aud.default_audio_in,'Focusrite')
+% % % % %     ipind = find(contains(strINPUT, 'Analogue')&contains(strINPUT, aud.default_audio_in));
+% % % % %     opind = find(contains(strOUTPUT, 'Speakers')&contains(strOUTPUT, aud.default_audio_out));
+% % % % %     tgind = find(contains(strOUTPUT, 'Playback')&contains(strOUTPUT, aud.default_audio_out));
+% % % % % else
+% % % % %     ipind = find(contains(strINPUT, aud.default_audio_in));
+% % % % %     opind = find(contains(strOUTPUT, aud.default_audio_out));
+% % % % %     tgind = find(contains(strOUTPUT, aud.default_audio_out));
+% % % % % end
     
 strVisual={'figure', 'fixpoint', 'orthography'};
 
-% GUI for user to modify options
-fnames=fieldnames(expParams);
-fnames=fnames(~ismember(fnames,{'visual', 'root', 'audiopath', 'figurespath', 'subject', 'session', 'run', 'task', 'gender', 'deviceMic','deviceHead'}));
-for n=1:numel(fnames)
-    val=expParams.(fnames{n});
-    if ischar(val), fvals{n}=val;
-    elseif isempty(val), fvals{n}='';
-    else fvals{n}=mat2str(val);
-    end
-end
+% % % % % % % % % % GUI for user to modify options
+% % % % % % % % % fnames=fieldnames(expParams);
+% % % % % % % % % fnames=fnames(~ismember(fnames,{'visual', 'root', 'audiopath', 'subject', 'session', 'run', 'task', 'gender', 'deviceMic','deviceHead'}));
+% % % % % % % % % for n=1:numel(fnames)
+% % % % % % % % %     val=expParams.(fnames{n});
+% % % % % % % % %     if ischar(val), fvals{n}=val;
+% % % % % % % % %     elseif isempty(val), fvals{n}='';
+% % % % % % % % %     else fvals{n}=mat2str(val);
+% % % % % % % % %     end
+% % % % % % % % % end
 
-out_dropbox = {'visual', 'root', 'figurespath', 'subject', 'session', 'run', 'task', 'gender'};
-for n=1:numel(out_dropbox)
-    val=expParams.(out_dropbox{n});
-    if ischar(val), fvals_o{n}=val;
-    elseif isempty(val), fvals_o{n}='';
-    else fvals_o{n}=mat2str(val);
-    end
-end
+% % % % % % % % % % % out_dropbox = {'visual', 'root', 'subject', 'session', 'run', 'task', 'gender'};
+% % % % % % % % % % % for n=1:numel(out_dropbox)
+% % % % % % % % % % %     val=expParams.(out_dropbox{n});
+% % % % % % % % % % %     if ischar(val), fvals_o{n}=val;
+% % % % % % % % % % %     elseif isempty(val), fvals_o{n}='';
+% % % % % % % % % % %     else fvals_o{n}=mat2str(val);
+% % % % % % % % % % %     end
+% % % % % % % % % % % end
 
-default_width = 0.04; %0.08;
-default_intvl = 0.05; %0.10;
-
-thfig=dialog('units','norm','position',[.3,.3,.3,.5],'windowstyle','normal','name','FLvoice_run options','color','w','resize','on');
-uicontrol(thfig,'style','text','units','norm','position',[.1,.92,.8,default_width],'string','Experiment information:','backgroundcolor','w','fontsize',default_fontsize,'fontweight','bold');
-
-ht_txtlist = {};
-ht_list = {};
-for ind=1:size(out_dropbox,2)
-    ht_txtlist{ind} = uicontrol(thfig,'style','text','units','norm','position',[.1,.75-(ind-3)*default_intvl,.35,default_width],'string',[out_dropbox{ind}, ':'],'backgroundcolor','w','fontsize',default_fontsize-1,'fontweight','bold','horizontalalignment','right');
-    if strcmp(out_dropbox{ind}, 'visual')
-        ht_list{ind} = uicontrol(thfig,'style','popupmenu','units','norm','position',[.5,.75-(ind-3)*default_intvl,.4,default_width],'string', strVisual, 'value',find(strcmp(strVisual, expParams.visual)),'fontsize',default_fontsize-1,'callback',@thfig_callback4);
-    else
-        ht_list{ind} = uicontrol(thfig,'style','edit','units','norm','position',[.5,.75-(ind-3)*default_intvl,.4,default_width],'string', fvals_o{ind}, 'backgroundcolor',1*[1 1 1],'fontsize',default_fontsize-1,'callback',@thfig_callback3);
-    end
-end
-
-ht1=uicontrol(thfig,'style','popupmenu','units','norm','position',[.1,.75-8*default_intvl,.4,default_width],'string',fnames,'value',1,'fontsize',default_fontsize-1,'callback',@thfig_callback1);
-ht2=uicontrol(thfig,'style','edit','units','norm','position',[.5,.75-8*default_intvl,.4,default_width],'string','','backgroundcolor',1*[1 1 1],'fontsize',default_fontsize-1,'callback',@thfig_callback2);
-
-uicontrol(thfig,'style','text','units','norm','position',[.1,.75-9*default_intvl,.35,default_width],'string','Microphone:','backgroundcolor','w','fontsize',default_fontsize-1,'fontweight','bold','horizontalalignment','right');
-ht3a=uicontrol(thfig,'style','popupmenu','units','norm','position',[.5,.75-9*default_intvl,.4,default_width],'string',strINPUT,'value',ipind,'backgroundcolor',1*[1 1 1],'fontsize',default_fontsize-1);
-
-uicontrol(thfig,'style','text','units','norm','position',[.1,.75-10*default_intvl,.35,default_width],'string','Sound output:','backgroundcolor','w','fontsize',default_fontsize-1,'fontweight','bold','horizontalalignment','right');
-ht3b=uicontrol(thfig,'style','popupmenu','units','norm','position',[.5,.75-10*default_intvl,.4,default_width],'string',strOUTPUT,'value',opind,'backgroundcolor',1*[1 1 1],'fontsize',default_fontsize-1);
-
-ht3c0=uicontrol(thfig,'style','text','units','norm','position',[.1,.75-11*default_intvl,.35,default_width],'string','Scanner trigger:','backgroundcolor','w','fontsize',default_fontsize-1,'fontweight','bold','horizontalalignment','right');
-ht3c=uicontrol(thfig,'style','popupmenu','units','norm','position',[.5,.75-11*default_intvl,.4,default_width],'string',strOUTPUT,'value',tgind,'backgroundcolor',1*[1 1 1],'fontsize',default_fontsize-1);
-
-uicontrol(thfig,'style','pushbutton','string','Start','units','norm','position',[.1,.01,.38,.10],'callback','uiresume','fontsize',default_fontsize-1);
-uicontrol(thfig,'style','pushbutton','string','Cancel','units','norm','position',[.51,.01,.38,.10],'callback','delete(gcbf)','fontsize',default_fontsize-1);
+% % % % % % % % default_width = 0.04; %0.08;
+% % % % % % % % default_intvl = 0.05; %0.10;
+% % % % % % % % 
+% % % % % % % % thfig=dialog('units','norm','position',[.3,.3,.3,.5],'windowstyle','normal','name','FLvoice_run options','color','w','resize','on');
+% % % % % % % % uicontrol(thfig,'style','text','units','norm','position',[.1,.92,.8,default_width],'string','Experiment information:','backgroundcolor','w','fontsize',default_fontsize,'fontweight','bold');
+% % % % % % % % 
+% % % % % % % % ht_txtlist = {};
+% % % % % % % % ht_list = {};
+% % % % % % % % for ind=1:size(out_dropbox,2)
+% % % % % % % %     ht_txtlist{ind} = uicontrol(thfig,'style','text','units','norm','position',[.1,.75-(ind-3)*default_intvl,.35,default_width],'string',[out_dropbox{ind}, ':'],'backgroundcolor','w','fontsize',default_fontsize-1,'fontweight','bold','horizontalalignment','right');
+% % % % % % % %     if strcmp(out_dropbox{ind}, 'visual')
+% % % % % % % %         ht_list{ind} = uicontrol(thfig,'style','popupmenu','units','norm','position',[.5,.75-(ind-3)*default_intvl,.4,default_width],'string', strVisual, 'value',find(strcmp(strVisual, expParams.visual)),'fontsize',default_fontsize-1,'callback',@thfig_callback4);
+% % % % % % % %     else
+% % % % % % % %         ht_list{ind} = uicontrol(thfig,'style','edit','units','norm','position',[.5,.75-(ind-3)*default_intvl,.4,default_width],'string', fvals_o{ind}, 'backgroundcolor',1*[1 1 1],'fontsize',default_fontsize-1,'callback',@thfig_callback3);
+% % % % % % % %     end
+% % % % % % % % end
+% % % % % % % % 
+% % % % % % % % ht1=uicontrol(thfig,'style','popupmenu','units','norm','position',[.1,.75-8*default_intvl,.4,default_width],'string',fnames,'value',1,'fontsize',default_fontsize-1,'callback',@thfig_callback1);
+% % % % % % % % ht2=uicontrol(thfig,'style','edit','units','norm','position',[.5,.75-8*default_intvl,.4,default_width],'string','','backgroundcolor',1*[1 1 1],'fontsize',default_fontsize-1,'callback',@thfig_callback2);
+% % % % % % % % 
+% % % % % % % % uicontrol(thfig,'style','text','units','norm','position',[.1,.75-9*default_intvl,.35,default_width],'string','Microphone:','backgroundcolor','w','fontsize',default_fontsize-1,'fontweight','bold','horizontalalignment','right');
+% % % % % % % % ht3a=uicontrol(thfig,'style','popupmenu','units','norm','position',[.5,.75-9*default_intvl,.4,default_width],'string',strINPUT,'value',ipind,'backgroundcolor',1*[1 1 1],'fontsize',default_fontsize-1);
+% % % % % % % % 
+% % % % % % % % uicontrol(thfig,'style','text','units','norm','position',[.1,.75-10*default_intvl,.35,default_width],'string','Sound output:','backgroundcolor','w','fontsize',default_fontsize-1,'fontweight','bold','horizontalalignment','right');
+% % % % % % % % ht3b=uicontrol(thfig,'style','popupmenu','units','norm','position',[.5,.75-10*default_intvl,.4,default_width],'string',strOUTPUT,'value',opind,'backgroundcolor',1*[1 1 1],'fontsize',default_fontsize-1);
+% % % % % % % % 
+% % % % % % % % ht3c0=uicontrol(thfig,'style','text','units','norm','position',[.1,.75-11*default_intvl,.35,default_width],'string','Scanner trigger:','backgroundcolor','w','fontsize',default_fontsize-1,'fontweight','bold','horizontalalignment','right');
+% % % % % % % % ht3c=uicontrol(thfig,'style','popupmenu','units','norm','position',[.5,.75-11*default_intvl,.4,default_width],'string',strOUTPUT,'value',tgind,'backgroundcolor',1*[1 1 1],'fontsize',default_fontsize-1);
+% % % % % % % % 
+% % % % % % % % uicontrol(thfig,'style','pushbutton','string','Start','units','norm','position',[.1,.01,.38,.10],'callback','uiresume','fontsize',default_fontsize-1);
+% % % % % % % % uicontrol(thfig,'style','pushbutton','string','Cancel','units','norm','position',[.51,.01,.38,.10],'callback','delete(gcbf)','fontsize',default_fontsize-1);
 
 
 
 % % % % % if ~expParams.scan, set([ht3c0,ht3c],'visible','off'); end
 
-set([ht3c0,ht3c],'visible','off');
+% % % % set([ht3c0,ht3c],'visible','off');
 
 
 
-ind2 = find(strcmp(out_dropbox, 'figurespath'));
-if ~strcmp(expParams.visual, 'figure'), set([ht_txtlist{ind2}, ht_list{ind2}], 'visible', 'off'); end
-
-
-thfig_callback1;
-    function thfig_callback1(varargin)
-        tn=get(ht1,'value');
-        set(ht2,'string',fvals{tn});
-    end
-    function thfig_callback2(varargin)
-        tn=get(ht1,'value');
-        fvals{tn}=get(ht2,'string');
-    end
-    function thfig_callback3(varargin)
-        for tn=1:size(out_dropbox,2)
-            if strcmp(out_dropbox{tn}, 'visual'), continue; end
-            fvals_o{tn}=get(ht_list{tn}, 'string');
-            % % % % % % % % % % % % % % % % if strcmp(out_dropbox{tn},'scan')
-            % % % % % % % % % % % % % % % %     if isequal(str2num(fvals_o{tn}),0), set([ht3c0,ht3c],'visible','off'); 
-            % % % % % % % % % % % % % % % %     else set([ht3c0,ht3c],'visible','on'); 
-            % % % % % % % % % % % % % % % %     end
-            % % % % % % % % % % % % % % % % end
-        end
-    end
-    function thfig_callback4(varargin)
-        ind = find(strcmp(out_dropbox, 'visual'));
-        choice=get(ht_list{ind}, 'value');
-        fvals_o{ind}=strVisual{choice};
-        ind2 = find(strcmp(out_dropbox, 'figurespath'));
-        if ~strcmp(strVisual{choice}, 'figure')
-            set([ht_txtlist{ind2}, ht_list{ind2}], 'visible', 'off'); 
-        else 
-            set([ht_txtlist{ind2}, ht_list{ind2}], 'visible', 'on');
-        end
-    end
-
-uiwait(thfig);
-ok=ishandle(thfig);
-if ~ok, return; end
-expParams.deviceMic=strINPUT{get(ht3a,'value')};
-expParams.deviceHead=strOUTPUT{get(ht3b,'value')};
-% % % % % % % % % % % % % % % % expParams.deviceScan=strOUTPUT{get(ht3c,'value')};
-delete(thfig);
-for n=1:numel(fnames)
-    val=fvals{n};
-    if ischar(expParams.(fnames{n})), expParams.(fnames{n})=val;
-    elseif isempty(val), expParams.(fnames{n})=[];
-    else
-        assert(~isempty(str2num(val)),'unable to interpret string %s',val);
-        expParams.(fnames{n})=str2num(val);
-    end
-end
-for n=1:numel(out_dropbox)
-    val=fvals_o{n};
-    if ischar(expParams.(out_dropbox{n})), expParams.(out_dropbox{n})=val;
-    elseif isempty(val), expParams.(out_dropbox{n})=[];
-    else
-        assert(~isempty(str2num(val)),'unable to interpret string %s',val);
-        expParams.(out_dropbox{n})=str2num(val);
-    end
-end
+% % % % % % % % ind2 = find(strcmp(out_dropbox, 'figurespath'));
+% % % % % % % % if ~strcmp(expParams.visual, 'figure'), set([ht_txtlist{ind2}, ht_list{ind2}], 'visible', 'off'); end
+% % % % % % % % 
+% % % % % % % % 
+% % % % % % % % thfig_callback1;
+% % % % % % % %     function thfig_callback1(varargin)
+% % % % % % % %         tn=get(ht1,'value');
+% % % % % % % %         set(ht2,'string',fvals{tn});
+% % % % % % % %     end
+% % % % % % % %     function thfig_callback2(varargin)
+% % % % % % % %         tn=get(ht1,'value');
+% % % % % % % %         fvals{tn}=get(ht2,'string');
+% % % % % % % %     end
+% % % % % % % %     function thfig_callback3(varargin)
+% % % % % % % %         for tn=1:size(out_dropbox,2)
+% % % % % % % %             if strcmp(out_dropbox{tn}, 'visual'), continue; end
+% % % % % % % %             fvals_o{tn}=get(ht_list{tn}, 'string');
+% % % % % % % %             % % % % % % % % % % % % % % % % if strcmp(out_dropbox{tn},'scan')
+% % % % % % % %             % % % % % % % % % % % % % % % %     if isequal(str2num(fvals_o{tn}),0), set([ht3c0,ht3c],'visible','off'); 
+% % % % % % % %             % % % % % % % % % % % % % % % %     else set([ht3c0,ht3c],'visible','on'); 
+% % % % % % % %             % % % % % % % % % % % % % % % %     end
+% % % % % % % %             % % % % % % % % % % % % % % % % end
+% % % % % % % %         end
+% % % % % % % %     end
+% % % % % % % %     function thfig_callback4(varargin)
+% % % % % % % %         ind = find(strcmp(out_dropbox, 'visual'));
+% % % % % % % %         choice=get(ht_list{ind}, 'value');
+% % % % % % % %         fvals_o{ind}=strVisual{choice};
+% % % % % % % %         ind2 = find(strcmp(out_dropbox, 'figurespath'));
+% % % % % % % %         if ~strcmp(strVisual{choice}, 'figure')
+% % % % % % % %             set([ht_txtlist{ind2}, ht_list{ind2}], 'visible', 'off'); 
+% % % % % % % %         else 
+% % % % % % % %             set([ht_txtlist{ind2}, ht_list{ind2}], 'visible', 'on');
+% % % % % % % %         end
+% % % % % % % %     end
+% % % % % % % % 
+% % % % % % % % uiwait(thfig);
+% % % % % % % % ok=ishandle(thfig);
+% % % % % % % % if ~ok, return; end
+% % % % % % % expParams.deviceMic=strINPUT{get(ht3a,'value')};
+% % % % % % % expParams.deviceHead=strOUTPUT{get(ht3b,'value')};
+% % % % % % % % % % % % % % % % % % % % % % % expParams.deviceScan=strOUTPUT{get(ht3c,'value')};
+% % % % % % % delete(thfig);
+% % % % % % % for n=1:numel(fnames)
+% % % % % % %     val=fvals{n};
+% % % % % % %     if ischar(expParams.(fnames{n})), expParams.(fnames{n})=val;
+% % % % % % %     elseif isempty(val), expParams.(fnames{n})=[];
+% % % % % % %     else
+% % % % % % %         assert(~isempty(str2num(val)),'unable to interpret string %s',val);
+% % % % % % %         expParams.(fnames{n})=str2num(val);
+% % % % % % %     end
+% % % % % % % end
+% % % % % % % for n=1:numel(out_dropbox)
+% % % % % % %     val=fvals_o{n};
+% % % % % % %     if ischar(expParams.(out_dropbox{n})), expParams.(out_dropbox{n})=val;
+% % % % % % %     elseif isempty(val), expParams.(out_dropbox{n})=[];
+% % % % % % %     else
+% % % % % % %         assert(~isempty(str2num(val)),'unable to interpret string %s',val);
+% % % % % % %         expParams.(out_dropbox{n})=str2num(val);
+% % % % % % %     end
+% % % % % % % end
 
 % visual setup
-if strcmp(expParams.visual, 'figure')
-    annoStr = setUpVisAnnot_HW([1 1 1]);
-else
+% % % % % % % % % if strcmp(expParams.visual, 'figure')
+% % % % % % % % %     annoStr = setUpVisAnnot_HW([1 1 1]);
+% % % % % % % % % else
     annoStr = setUpVisAnnot_HW([0 0 0]);
-end
+% % % % % % % % % end
 annoStr.Stim.FontSize = ortho_font_size; 
 
 CLOCKp = ManageTime('start');
@@ -406,7 +385,7 @@ taskpath = fullfile(expParams.root, sprintf('sub-%s',expParams.subject), sprintf
 filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.run)]; % this string gets used in a variety of files associated with this run
 
 
-[trials, op] = generate_trial_table(op); 
+
 
                     % % % % Input_audname  = fullfile(taskpath,sprintf('sub-%s_ses-%d_run-%d_task-%s_desc-stimulus.txt',expParams.subject, expParams.session, expParams.run, expParams.task));
                     % % % % Input_condname  = fullfile(taskpath,sprintf('sub-%s_ses-%d_run-%d_task-%s_desc-conditions.txt',expParams.subject, expParams.session, expParams.run, expParams.task));
@@ -423,8 +402,8 @@ filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.r
                     % % % % Input_files_temp=Input_files(cellfun('length',Input_files)>0);
                     % % % % NoNull = find(~strcmp(Input_files_temp, 'NULL'));
 
-
-Input_files = cellfun(@(x)[x,'.wav'], unique(trials.name), 'UniformOutput', false);
+Input_files = cellfun(@(x)[paths.audio_stim_task, filesep, x,'.wav'], unique(trials.name), 'UniformOutput', false); 
+% % % % Input_files = cellfun(@(x)[x,'.wav'], unique(trials.name), 'UniformOutput', false);
 
                 % % % % if ispc
                 % % % %     Input_files=arrayfun(@(x)fullfile(paths.audio_stim_ses, expParams.task, strcat(strrep(x, '/', '\'), '.wav')), Input_files_temp);
@@ -447,7 +426,7 @@ Input_files = cellfun(@(x)[x,'.wav'], unique(trials.name), 'UniformOutput', fals
                 % % % % ok=cellfun(@(x)exist(x,'file'), Input_files(NoNull));
                 % % % % assert(all(ok), 'unable to find files %s', sprintf('%s ',Input_files{NoNull(~ok)}));
 
-ok=cellfun(@(x)exist(x,'file'), Input_files)
+ok=cellfun(@(x)exist(x,'file'), Input_files); 
 assert(all(ok), 'unable to find files %s', sprintf('%s ',Input_files{~ok}));
 
                 % % % % dirFiles=cellfun(@dir, Input_files(NoNull), 'uni', 0);
@@ -468,11 +447,11 @@ Input_fs=num2cell(ones(size(Input_files)));
 
 
 [Input_sound,Input_fs]=cellfun(@audioread, Input_files,'uni',0);
-[silent_sound,silent_fs]=audioread(fullfile(paths.audio_stim, 'silent.wav'));
+[silent_sound,silent_fs]=audioread(fullfile(paths.stim, 'silent.wav'));
 stimreads=cell(size(Input_files));
 stimreads=cellfun(@(x)dsp.AudioFileReader(x, 'SamplesPerFrame', 2048),Input_files,'uni',0);
 % % % % stimreads(setdiff(1:numel(stimreads), NoNull))=arrayfun(@(x)dsp.AudioFileReader(fullfile(paths.audio_stim_ses, 'silent.wav'), 'SamplesPerFrame', 2048),1:numel(Input_files(setdiff(1:numel(stimreads), NoNull))),'uni',0);
-sileread = dsp.AudioFileReader(fullfile(paths.audio_stim_ses, 'silent.wav'), 'SamplesPerFrame', 2048);
+sileread = dsp.AudioFileReader(fullfile(paths.stim, 'silent.wav'), 'SamplesPerFrame', 2048);
 
 
              
@@ -484,7 +463,7 @@ sileread = dsp.AudioFileReader(fullfile(paths.audio_stim_ses, 'silent.wav'), 'Sa
                 % % % %     Input_conditions=Input_conditions(cellfun('length',Input_conditions)>0);
                 % % % %     assert(numel(Input_files)==numel(Input_conditions),'unequal number of lines/trials in %s (%d) and %s (%d)',Input_audname, numel(Input_files), Input_condname, numel(Input_conditions));
                 % % % % end
-op.ntrials = length(Input_conditions); % pull out the number of trials from the stimList
+% % % % % % % % % % op.ntrials = length(Input_conditions); % pull out the number of trials from the stimList
 
 Input_duration=cellfun(@(a,b)numel(a)/b, Input_sound, Input_fs);
 %meanInput_duration=mean(Input_duration(Input_duration>0));
@@ -496,26 +475,26 @@ silence_dur=size(silent_sound,1)/silent_fs;
  
 
 % set audio device variables: deviceReader: mic input; beepPlayer: beep output; triggerPlayer: trigger output
-if isempty(expParams.deviceMic)
-    disp(char(arrayfun(@(n)sprintf('Device #%d: %s ',n,strINPUT{n}),1:numel(strINPUT),'uni',0))); ID=input('MICROPHONE input device # : ');
-    expParams.deviceMic=strINPUT{ID};
-end
-if ~ismember(expParams.deviceMic, strINPUT), expParams.deviceMic=strINPUT{find(strncmp(lower(expParams.deviceMic),lower(strINPUT),numel(expParams.deviceMic)),1)}; end
-assert(ismember(expParams.deviceMic, strINPUT), 'unable to find match to deviceMic name %s',expParams.deviceMic);
-if isempty(expParams.deviceHead)
-    %disp(char(arrayfun(@(n)sprintf('Device #%d: %s ',n,info.output(n).Name),1:numel(info.output),'uni',0)));
-    disp(char(arrayfun(@(n)sprintf('Device #%d: %s ',n,strOUTPUT{n}),1:numel(strOUTPUT),'uni',0)));
-    if isempty(expParams.deviceHead),
-        ID=input('HEADPHONES output device # : ');
-        expParams.deviceMic=strOUTPUT{ID};
-    end
-end
+% % % % if isempty(expParams.deviceMic)
+% % % %     disp(char(arrayfun(@(n)sprintf('Device #%d: %s ',n,strINPUT{n}),1:numel(strINPUT),'uni',0))); ID=input('MICROPHONE input device # : ');
+% % % %     expParams.deviceMic=strINPUT{ID};
+% % % % end
+% % % % if ~ismember(expParams.deviceMic, strINPUT), expParams.deviceMic=strINPUT{find(strncmp(lower(expParams.deviceMic),lower(strINPUT),numel(expParams.deviceMic)),1)}; end
+% % % % assert(ismember(expParams.deviceMic, strINPUT), 'unable to find match to deviceMic name %s',expParams.deviceMic);
+% % % % % % % % if isempty(expParams.deviceHead)
+% % % % % % % %     %disp(char(arrayfun(@(n)sprintf('Device #%d: %s ',n,info.output(n).Name),1:numel(info.output),'uni',0)));
+% % % % % % % %     disp(char(arrayfun(@(n)sprintf('Device #%d: %s ',n,strOUTPUT{n}),1:numel(strOUTPUT),'uni',0)));
+% % % % % % % %     if isempty(expParams.deviceHead),
+% % % % % % % %         ID=input('HEADPHONES output device # : ');
+% % % % % % % %         expParams.deviceMic=strOUTPUT{ID};
+% % % % % % % %     end
+% % % % % % % % end
 % set up device reader settings for accessing audio signal during recording
-expParams.sr = 48000;            % sample frequenct (Hz)
+expParams.sr = 48000;            % sample frequency (Hz)
 frameDur = .050;                 % frame duration in seconds
 expParams.frameLength = expParams.sr*frameDur;      % framelength in samples
 deviceReader = audioDeviceReader(...
-    'Device', expParams.deviceMic, ...
+    'Device', aud.device_in, ...
     'SamplesPerFrame', expParams.frameLength, ...
     'SampleRate', expParams.sr, ...
     'BitDepth', '24-bit integer');    
@@ -523,11 +502,11 @@ deviceReader = audioDeviceReader(...
 if ~ismember(expParams.deviceHead, strOUTPUT), expParams.deviceHead=strOUTPUT{find(strncmp(lower(expParams.deviceHead),lower(strOUTPUT),numel(expParams.deviceHead)),1)}; end
 assert(ismember(expParams.deviceHead, strOUTPUT), 'unable to find match to deviceHead name %s',expParams.deviceHead);
 [ok,ID]=ismember(expParams.deviceHead, strOUTPUT);
-[twav, tfs] = audioread(fullfile(fileparts(which(mfilename)),'flvoice_run_beep.wav'));
+[twav, tfs] = audioread([paths.stim, filesep,'flvoice_run_beep.wav']);
 beepdur = numel(twav)/tfs;
 %stimID=info.output(ID).ID;
 %beepPlayer = audioplayer(twav*0.2, tfs, 24, info.output(ID).ID);
-beepread = dsp.AudioFileReader(fullfile(fileparts(which(mfilename)),'flvoice_run_beep.wav'), 'SamplesPerFrame', 2048);
+beepread = dsp.AudioFileReader([paths.stim, filesep,'flvoice_run_beep.wav'], 'SamplesPerFrame', 2048);
 %headwrite = audioDeviceWriter('SampleRate',beepread.SampleRate,'Device',expParams.deviceHead, 'SupportVariableSizeInput', true, 'BufferSize', 2048);
 headwrite = audioDeviceWriter('SampleRate',beepread.SampleRate,'Device',expParams.deviceHead);
 
@@ -564,11 +543,11 @@ end
 
 % set up picture display
 
-if strcmp(expParams.visual, 'figure'), imgBuf = arrayfun(@(x)imread(All_figures{x}), 1:length(All_figures),'uni',0); end
+% % % % % % % % if strcmp(expParams.visual, 'figure'), imgBuf = arrayfun(@(x)imread(All_figures{x}), 1:length(All_figures),'uni',0); end
     
 
 pause(1);
-save(Output_name, 'expParams');
+% save(Output_name, 'expParams');
 
 %Initialize trialData structure
 trialData = struct;
@@ -670,27 +649,27 @@ for itrial = starting_trial:op.ntrials
     trialData(itrial).stimName = trials.name{itrial};
     trialData(itrial).display = trials.name{itrial};
     
-                        trialData(itrial).condLabel = Input_conditions{itrial};
+                        % trialData(itrial).condLabel = Input_conditions{itrial};
     
                         if strcmp(trialData(itrial).display, 'NULL'); trialData(itrial).display = 'yyy'; end
                         %     trialData(ii).timeStim = numel(Input_sound{ii})/Input_fs{ii}; 
     trialData(itrial).timeStim = size(Input_sound{itrial},1)/Input_fs{itrial}; 
     trialData(itrial).timePostStim = expParams.timePostStim(1) + diff(expParams.timePostStim).*rand; 
     trialData(itrial).timePostOnset = expParams.timePostOnset(1) + diff(expParams.timePostOnset).*rand; 
-    trialData(itrial).timeScan = expParams.timeScan(1) + diff(expParams.timeScan).*rand; 
+    % trialData(itrial).timeScan = expParams.timeScan(1) + diff(expParams.timeScan).*rand; 
     trialData(itrial).timePreStim = expParams.timePreStim(1) + diff(expParams.timePreStim).*rand; 
     trialData(itrial).timeMax = expParams.timeMax(1) + diff(expParams.timeMax).*rand; 
     trialData(itrial).timePostSound = expParams.timePostSound;
     trialData(itrial).timePreSound = expParams.timePreSound;
     %stimPlayer = audioplayer(Input_sound{ii},Input_fs{ii}, 24, stimID);
     stimread = stimreads{itrial};
-                            SpeechTrial=~strcmp(trialData(itrial).condLabel,'NULL');
+                            % SpeechTrial=~strcmp(trialData(itrial).condLabel,'NULL');
                         %     SpeechTrial=~strcmp(trialData(ii).condLabel,'S');
 
     % set up variables for audio recording and voice detection
     % % % % % % % prepareScan=0.250*(expParams.scan~=0); % if scanning, end recording 250ms before scan trigger
     prepareScan = 0; 
-    % % % % % % % % % % % % recordLen= trialData(itrial).timeMax-prepareScan; % max total recording time
+    recordLen= trialData(itrial).timeMax-prepareScan; % max total recording time
     % % % % % % % % % % % % recordLenNULL = expParams.timeNULL-prepareScan;
     nSamples = ceil(recordLen*expParams.sr);
     % % % % % % % % % % % % % % % % % nSamplesNULL = ceil(recordLenNULL*expParams.sr);
@@ -707,7 +686,7 @@ for itrial = starting_trial:op.ntrials
     % set up figure for real-time plotting of audio signal of next trial
     if show_mic_trace_figure
         figure(rtfig)
-        set(micTitle,'string',sprintf('%s %s run %d trial %d condition: %s', expParams.subject, expParams.task, expParams.run, itrial, trialData(itrial).condLabel));
+        set(micTitle,'string',sprintf('%s %s run %d trial %d condition: %s', expParams.subject, expParams.task, expParams.run, itrial));
     end
 
     
@@ -865,7 +844,7 @@ for itrial = starting_trial:op.ntrials
         frameCount = frameCount+1;
 
     end
-    if oiceOnsetDetected == 0, fprintf('warning: voice was expected but not detected (rmsThresh = %f)\n',rmsThresh); end
+    if voiceOnsetDetected == 0, fprintf('warning: voice was expected but not detected (rmsThresh = %f)\n',rmsThresh); end
     release(deviceReader); % end recording
     
     switch expParams.visual
