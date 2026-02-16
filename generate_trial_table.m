@@ -95,7 +95,7 @@ else % for training/testing, stim list needs to be sorted / multiplied / shuffle
     % shuffle stim and make sure that we don't exceed the max allowed number of sequential repetitions of a stim
     max_reps_in_a_row = inf; 
     while max_reps_in_a_row > op.max_repeated_trials
-        trials = trials(randperm(op.ntrials), :); % shuffle
+        trials = trials(randperm(op.ntrials), :); % shuffle trials
         [~,~,stiminds] = unique(trials.name); 
 
         max_reps_in_a_row = 1; 
@@ -113,21 +113,6 @@ else % for training/testing, stim list needs to be sorted / multiplied / shuffle
 
 end
 
-
-% % % % 
-% % % % 
-% % % % %%%% check for overwriting
-% % % % if exist(spath,'file')
-% % % %     overwrite_ok = input('Stimuli for this subject/session/run already exists; overwrite? (Enter y if OK to delete)','s');
-% % % %     if strcmp(overwrite_ok,'y')
-% % % %         fprintf(['Overwriting stim for subject ', subjID, ', session ', num2str(session) , ', run ', num2str(run), '\n'])
-% % % %     else 
-% % % %         error('Not overwriting stim files; quitting setup_subj script')
-% % % %     end
-% % % % end
-% % % % 
-% % % % writetable(pretest_tab,spath) % save table with condition labels
-% % % % 
-% % % % pretest_words = pretest_tab.name;
-
-
+nancol = nan(op.ntrials,1);
+trials = [trials, table(nancol,nancol,nancol,nancol,nancol,nancol,'VariableNames',...
+    {'time_stim_vis_on','time_stim_vis_off','time_stim_aud_on','time_stim_aud_off','time_beep_on','time_beep_off'})]; 

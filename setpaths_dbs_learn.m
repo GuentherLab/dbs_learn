@@ -9,7 +9,6 @@ paths.code = 'C:\docs\code';
     paths.code_dbs_learn = [paths.code, filesep, 'dbs_learn']; 
     paths.code_analysis = [paths.code_dbs_learn, filesep, 'analysis'];
     paths.annot = [paths.code_analysis, filesep, 'annot']; % small annotation files
-    paths.config = [paths.code_dbs_learn, filesep, 'config']; 
     paths.stim = [paths.code_dbs_learn, filesep, 'stimuli'];
 
     % external toolboxes
@@ -26,16 +25,15 @@ end
      [paths.annot];...
      [paths.code_dbs_learn, filesep, 'util'];...
     [paths.stim];...
-    [paths.code_dbs_learn, filesep, 'config'];...
     [paths.code_dbs_learn, filesep, 'NIMH_daqtoolbox_(Apr-7-2016)'];... % needed for sending beacon
     paths.spm;... %%%% use version of spm in fieldtrip
     % paths.bml;...
     paths.fieldtrip_toolbox;...
 };
 
- addpath(paths_to_add{:})
+ addpath(paths_to_add{:}); clear paths_to_add
 
-bml_defaults()
+% bml_defaults()
 % ft_defaults()
 
 

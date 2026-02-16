@@ -1,5 +1,5 @@
-% modify this function based on the task computer and audio devices you are using
-
+%%%% modify this function based on the task computer and audio devices you are using
+% some computers have specifications for input devices; however we might not end up doing audio recording in the caller script
 
 function aud = setup_audio_devices()
 
