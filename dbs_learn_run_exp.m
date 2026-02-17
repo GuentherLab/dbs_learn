@@ -1,6 +1,14 @@
 % main script for running DBS-Learn multisyllabic and subsyllabic experiments
 %   after starting this script, select appropriate config file for the experimental phase you intend to run
-
+%
+% capitalized times like "TIME_VIS_STIM_OFF" are time targets and are computed each trial based on previous timepoints; they do not get saved
+% .... for each target time, we measure (approximately) the actual time of that event
+% .......... and save it in the trial table with formatting like "trials.t_vis_stim_off(itrial)"
+%
+% what this script saves for each run: 
+%   trials table .tsv - contains event times, stim info; saved every trial
+%   op .mat - contains options structure and other info not specific to individual trials
+%   beacon times and beacon event table file
 
 function dbs_learn_run_exp(op)
 
@@ -25,6 +33,7 @@ op.task_computer = getenv('COMPUTERNAME');
 
 field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
 field_default('op','require_keypress_every_trial',0); % if true, experimenter must press any key at end of trial to proceed to next trial
+field_default('op','vis_offset_to_go',[0.25, 0.75]); % min and max of delay (jittered) between visual offset and GO cue presentation
 field_default('op','ntrials_between_breaks',50); 
 field_default('op','ortho_font_size',50);
 field_default('op','is_dbs_run',0); % if yes, will try to send beacon pulses for syncing
@@ -39,25 +48,35 @@ CLOCKp = ManageTime('start');
 TIME_PREPARE = 0.5; % Waiting period before experiment begin (sec)
 runtimer = tic; % timer for elapsed time in this run
 
-% timing params inherited from FLVoice_run.m.... a lot of these descriptions won't be meaningful outside the fmri context :
-%       timePostStim                : time (s) from end of the audio stimulus presentation to the GO signal (D1 in schematic above) (one value for fixed time, two values for minimum-maximum range of random times) [.25 .75] 
-%       timePostOnset               : time (s) from subject's voice onset to the scanner trigger (or to pre-stimulus segment, if scan=false) (D2 in schematic above) (one value for fixed time, two values for minimum-maximum range of random times) [4.5] 
-%       timeMax                     : maximum time (s) before GO signal and scanner trigger (or to pre-stimulus segment, if scan=false) (D3 in schematic above) (recording portion in a trial may end before this if necessary to start scanner) [5.5] 
-%       timePreStim                 : time (s) from end of scan to start of next trial stimulus presentation (D5 in schematic above) (one value for fixed time, two values for minimum-maximum range of random times) [.25] 
-%       timePreSound                : time (s) from start of orthographic presentation to the start of sound stimulus (D6 in schematic above) [.5]
-%       timePostSound               : time (s) from end of sound stimulus to the end of orthographic presentation
-field_default('op','timePostStim', [.25 .75]), 
-field_default('op','timePostOnset', 4.5), 
-field_default('op','timePreStim', .25), 
-field_default('op','timeMax', 5.5), 
-field_default('op','timePreSound', .5), 
-field_default('op','timePostSound', .47), 
+% % % % % % % timing params inherited from FLVoice_run.m.... a lot of these descriptions won't be meaningful outside the fmri context :
+% % % % % % %       timePostStim                : time (s) from end of the audio stimulus presentation to the GO signal (D1 in schematic above) (one value for fixed time, two values for minimum-maximum range of random times) [.25 .75] 
+% % % % % % %       timePostOnset               : time (s) from subject's voice onset to the scanner trigger (or to pre-stimulus segment, if scan=false) (D2 in schematic above) (one value for fixed time, two values for minimum-maximum range of random times) [4.5] 
+% % % % % % %       timeMax                     : maximum time (s) before GO signal and scanner trigger (or to pre-stimulus segment, if scan=false) (D3 in schematic above) (recording portion in a trial may end before this if necessary to start scanner) [5.5] 
+% % % % % % %       timePreStim                 : time (s) from end of scan to start of next trial stimulus presentation (D5 in schematic above) (one value for fixed time, two values for minimum-maximum range of random times) [.25] 
+% % % % % % %       timePostSound               : time (s) from end of sound stimulus to the end of orthographic presentation
+% % % % % % field_default('op','timePostStim', [.25 .75]), 
+% % % % % % field_default('op','timePostOnset', 4.5), 
+% % % % % % field_default('op','timePreStim', .25), 
+% % % % % % field_default('op','timeMax', 5.5), 
+% % % % % % field_default('op','timePostSound', .47), 
 
 
 
 paths.data_sub = [paths.data, filesep, op.sub]; 
 paths.data_ses_beh = [paths.data_sub, filesep, op.ses, filesep, 'beh']; % behavioral data folder for the session (most outputs of this script)
 [trials, op] = generate_trial_table(op); 
+
+% set session-specific timing params
+%%% op.gobeep_to_next_trial is the speech window - time between GO cue onset and when the next trial's stim is presented
+switch op.ses
+    case 'subsyl'
+        op.vis_stim_dur = 1.5; % 1.5s is similar to vis stim from intrasurgical experiment in richardson lab
+        op.gobeep_to_next_trial = 4; 
+    case 'multisyl'
+        op.vis_stim_dur = 3; % maximum audio stim length (at 7 syllables) is 2.8sec
+        op.gobeep_to_next_trial = 4; 
+end
+
 
 if ~exist(paths.data_ses_beh, 'dir')
     mkdir(paths.data_ses_beh)
@@ -111,33 +130,11 @@ stim_audio.dur=cellfun(@(a,b)numel(a)/b, stim_audio.audio, stim_audio.fs);
 
 % set up sound output players
 audiodevreset;
-% % % % % % % % info=audiodevinfo;
-% % % % % % % % strOUTPUT={info.output.Name};
-% % % % % % % % if ~ismember(aud.device_out, strOUTPUT), 
-% % % % % % % %     aud.device_out=strOUTPUT{find(strncmp(lower(aud.device_out),lower(strOUTPUT),numel(aud.device_out)),1)}; 
-% % % % % % % % end
-% % % % % % % % assert(ismember(aud.device_out, strOUTPUT), 'unable to find match to deviceHead name %s',aud.device_out);
-% % % % % % % % % % % % % [ok,ID]=ismember(aud.device_out, strOUTPUT);
 [beep_wav, beep_fs] = audioread([paths.stim, filesep,'flvoice_run_beep.wav']);
 op.beep_dur = numel(beep_wav)/beep_fs;
 
 beepread = dsp.AudioFileReader([paths.stim, filesep,'flvoice_run_beep.wav'], 'SamplesPerFrame', 2048);
 headwrite = audioDeviceWriter('SampleRate',beepread.SampleRate,'Device',aud.device_out);
-
-
-%% timing checks inherited from FLvoice_run.... AM not sure what these are actually for
-assert(all(isfinite(op.timePostStim))&ismember(numel(op.timePostStim),[1,2]), 'timePostStim field must have one or two elements');
-assert(all(isfinite(op.timePostOnset))&ismember(numel(op.timePostOnset),[1,2]), 'timePostOnset field must have one or two elements');
-assert(all(isfinite(op.timePreStim))&ismember(numel(op.timePreStim),[1,2]), 'timePreStim field must have one or two elements');
-assert(all(isfinite(op.timeMax))&ismember(numel(op.timeMax),[1,2]), 'timeMax field must have one or two elements');
-if numel(op.timePostStim)==1, op.timePostStim=op.timePostStim+[0 0]; end
-if numel(op.timePostOnset)==1, op.timePostOnset=op.timePostOnset+[0 0]; end
-if numel(op.timePreStim)==1, op.timePreStim=op.timePreStim+[0 0]; end
-if numel(op.timeMax)==1, op.timeMax=op.timeMax+[0 0]; end
-op.timePostStim=sort(op.timePostStim);
-op.timePostOnset=sort(op.timePostOnset);
-op.timePreStim=sort(op.timePreStim);
-op.timeMax=sort(op.timeMax);
 
 ok=ManageTime('wait', CLOCKp, TIME_PREPARE);
 set(annoStr.Stim, 'Visible','off');     % Turn off preparation page
@@ -153,6 +150,7 @@ CLOCK=[];                               % Main clock (not yet started)
 
 
 %% BEACON SYNC SETUP......  can we make beacon times into a tsv file instead of mat file? 
+
 if op.is_dbs_run
     %%% send signal to percept here
     %%%%% give option for experimenter to send more pulses to calibrate
@@ -192,10 +190,17 @@ save(paths.run_exp_op_file, 'op'); % save ops structure, including paths
 for itrial = starting_trial:op.ntrials
 
     % set up trial (see subfunction at end of script)
-    % print progress to window
-    fprintf(['Run ',num2str(op.run), ', trial ',num2str(itrial), '/',num2str(op.ntrials), ' ....... ', trials.name{itrial}, '\n'])
 
-    if (mod(itrial,op.ntrials_between_breaks) == 0) && (itrial ~= op.ntrials)  % Break after every X trials  , but not on the last
+
+
+    if isempty(CLOCK)
+        CLOCK = ManageTime('start');                        % resets clock to t=0 (first-trial start-time)
+        TIME_STIM_START = 0;
+    end
+    
+    ok=ManageTime('wait', CLOCK, TIME_STIM_START);
+
+    if (mod(itrial,op.ntrials_between_breaks) == 0) && (itrial ~= op.ntrials)  % Break after every X trials, but not on the last
         pause()
 
         if op.is_dbs_run
@@ -206,7 +211,7 @@ for itrial = starting_trial:op.ntrials
         end
 
     end
-    % >>>> ZY addition
+    %% >>>> ZY addition
     % check task control
     if ~exist('figTC','var') || ~ishandle(figTC)
         figTC=taskControlGUI_release(taskState);
@@ -231,32 +236,13 @@ for itrial = starting_trial:op.ntrials
         fprintf('Task Resumed ...\n')
     end
     %<<<
-    %
+    %%
     set(annoStr.Plus, 'Visible','on');
-
-  
-    trials.time_post_stim(itrial) = op.timePostStim(1) + diff(op.timePostStim).*rand; 
-
-    % these 4 values are exactly the same across trials
-    TIME_PRE_STIM(itrial) = op.timePreStim(1) + diff(op.timePreStim).*rand; 
-    TIME_MAX(itrial) = op.timeMax(1) + diff(op.timeMax).*rand; 
-    TIME_POST_SOUND(itrial) = op.timePostSound;
-    TIME_PRE_SOUND(itrial) = op.timePreSound;
-
 
     audiorow = strcmp(trials.name{itrial}, stim_audio.name); % find the row of the audio file to play
     stimread = stim_audio.stimreads{audiorow};
-    trials.time_stim(itrial) = size(stim_audio.audio{audiorow},1)/stim_audio.fs{audiorow}; 
 
-    if isempty(CLOCK)
-        CLOCK = ManageTime('start');                        % resets clock to t=0 (first-trial start-time)
-        TIME_TRIAL_START = 0;
-        TIME_STIM_START = 0;
-    else
-        TIME_TRIAL_START = ManageTime('current', CLOCK);
-    end
-    
-    % >>>> ZY addition
+    %% >>>> ZY addition
     % I put this before AM defines TIME_TRIAL_START, only so that I don't add additional delay to actual presentation
     % but we can figure out a better way to integrate
 
@@ -271,28 +257,25 @@ for itrial = starting_trial:op.ntrials
             save(paths.trig_events_tab_fname, 'tblEvt');
         end
     end
-    % <<<
+    %% <<<
+    
 
-    ok=ManageTime('wait', CLOCK, TIME_STIM_START);
-    TIME_STIM_ACTUALLYSTART = ManageTime('current', CLOCK);
+
    
+    % show stim orthography
     set(annoStr.Plus, 'Visible','off');
     set(annoStr.Stim, 'String', trials.name{itrial});
     set(annoStr.Stim, 'Visible','on');
     drawnow;
-    trials.time_stim_vis_on(itrial) = ManageTime('current', CLOCK);
+    trials.t_stim_vis_on(itrial) = ManageTime('current', CLOCK);
 
-    if ~ok, fprintf('i am late for this trial TIME_STIM_START\n'); end
 
-    TIME_SOUND_START = TIME_STIM_ACTUALLYSTART + TIME_PRE_SOUND(itrial);
-    %ok=ManageTime('wait', CLOCK, TIME_SOUND_START - stimoffset);
-    ok=ManageTime('wait', CLOCK, TIME_SOUND_START);
-
+    % play stim sound - ASAP after visual onset
      %%% AM note 2026/2/15: if time is measured before starting the while loop or after the first iteration of the while loop...
      % %  ..... this is generally a 20ms difference (likely due to the size of the audio chunk being written)
-    %  % ..... commnent in the tt and ii lines to test this, and compare to trials.time_stim_on(itrial)
+    %  % ..... commnent in the tt and ii lines to test this, and compare to trials.t_stim_on(itrial)
      % % (running on stryx laptop)
-    trials.time_stim_aud_on(itrial) = ManageTime('current', CLOCK);
+    trials.t_stim_aud_on(itrial) = ManageTime('current', CLOCK);
     % ii = 0; 
     while ~isDone(stimread); 
         sound=stimread();
@@ -305,61 +288,52 @@ for itrial = starting_trial:op.ntrials
     release(stimread);
     reset(headwrite);
 
-    % assume stim-off time based on stim-on time and stim duration
+    % print progress to window
+    fprintf(['Run ',num2str(op.run), ', trial ',num2str(itrial), '/',num2str(op.ntrials), ' ....... ', trials.name{itrial}, '\n'])
+
+    if ~ok, fprintf('i am late for this trial TIME_STIM_START\n'); end
+
+    % assume audio stim-off time based on audio stim-on time and audio stim duration
     % ... this stim-off time is exactly as accurate as the stim-on measurement
-    stimdur = stim_audio.dur(audiorow); 
-    trials.time_stim_aud_off(itrial) = trials.time_stim_aud_on(itrial) + stimdur; 
+    audstimdur = stim_audio.dur(audiorow); 
+    trials.t_stim_aud_off(itrial) = trials.t_stim_aud_on(itrial) + audstimdur; 
 
-
-    TIME_SOUND_END = trials.time_stim_aud_on + trials.time_stim(itrial);           % stimulus ends
-    if ~ok, fprintf('i am late for this trial TIME_SOUND_START\n'); end
-
-    TIME_ALLSTIM_END = TIME_SOUND_END + TIME_POST_SOUND(itrial);
-    ok=ManageTime('wait', CLOCK, TIME_ALLSTIM_END);
+    % wait for a fixed time after visual onset, then switch back to fixation cross
+    TIME_VIS_STIM_OFF = trials.t_stim_vis_on(itrial) + op.vis_stim_dur; 
+    ManageTime('wait', CLOCK, TIME_VIS_STIM_OFF);
     if strcmp(op.visual, 'orthography')
         set(annoStr.Stim, 'Visible','off');
         set(annoStr.Plus, 'Visible','on');
         drawnow;
-        trials.time_stim_vis_off(itrial) = ManageTime('current', CLOCK);
+        trials.t_stim_vis_off(itrial) = ManageTime('current', CLOCK);
     end
-    if ~ok, fprintf('i am late for this trial TIME_ALLSTIM_END\n'); end        
 
-    TIME_GOSIGNAL_START = TIME_ALLSTIM_END + trials.time_post_stim(itrial);          % GO signal time
-
-
-    ok=ManageTime('wait', CLOCK, TIME_GOSIGNAL_START - op.beepoffset);     % waits for recorder initialization time
-    
+    % plan GO signal start time based on visual offset time
+    % .... do not base off of audio offset, because this varies depending on the number of syllables in multisyl
+    trials.go_delay(itrial) = min(op.vis_offset_to_go) + rand*diff(op.vis_offset_to_go); % get jittered time between stim offset and go cue
+    TIME_GOSIGNAL_START = trials.t_stim_vis_off(itrial)  + trials.go_delay(itrial);          % GO signal target time
     ok=ManageTime('wait', CLOCK, TIME_GOSIGNAL_START);     % waits for GO signal time
 
 
     %%% AM note 2026/2/15: if time is measured before or after playing the go beep, there is 5-25ms difference (running on stryx laptop)
     %     this may be because it reads in the beep as a whole chunk 
-    trials.time_go_on(itrial) = ManageTime('current', CLOCK); 
+    trials.t_go_aud_on(itrial) = ManageTime('current', CLOCK); 
     while ~isDone(beepread); sound=beepread();headwrite(sound);end;reset(beepread);reset(headwrite);
 
     % assume beep-off time based on beep-on time and beep duration
     % ... this beep-off time is exactly as accurate as the beep-on measurement
-    trials.time_go_off(itrial) = trials.time_go_on(itrial) + op.beep_dur; 
+    trials.t_go_aud_off(itrial) = trials.t_go_aud_on(itrial) + op.beep_dur; 
 
     if strcmp(op.visual, 'fixpoint'),set(annoStr.Plus, 'color','g');drawnow;end
     if strcmp(op.visual, 'orthography'),set(annoStr.Plus, 'color','g');drawnow;end
     if ~ok, fprintf('i am late for this trial TIME_GOSIGNAL_START\n'); end
 
+    % show green cross ASAP after starting to play GO beep
+    set(annoStr.Plus, 'color','g');
+    trials.t_go_vis_on(itrial) = ManageTime('current', CLOCK); 
 
-    TIME_SCAN_START = trials.time_go_on(itrial) + TIME_MAX(itrial);
-
-
-   
-    switch op.visual
-        case 'fixpoint'
-            set(annoStr.Plus, 'color','w');
-        case 'orthography'
-            set(annoStr.Plus, 'color','w');
-    end
-
-        NEXTTRIAL = TIME_SCAN_START + TIME_PRE_STIM(itrial);
-
-    TIME_STIM_START = NEXTTRIAL; 
+    % set the target start time for the start of the next trial's onset time
+    TIME_STIM_START = trials.t_go_aud_on(itrial) + op.gobeep_to_next_trial; 
 
     % save timing info for this trial into the tsv 
     writetable(trials, paths.trial_info_file , 'Delimiter', '\t', 'FileType', 'text')

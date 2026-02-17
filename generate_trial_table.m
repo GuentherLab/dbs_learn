@@ -114,5 +114,5 @@ else % for training/testing, stim list needs to be sorted / multiplied / shuffle
 end
 
 nancol = nan(op.ntrials,1);
-trials = [trials, table(nancol,nancol,nancol,nancol,nancol,nancol,'VariableNames',...
-    {'time_stim_vis_on','time_stim_vis_off','time_stim_aud_on','time_stim_aud_off','time_beep_on','time_beep_off'})]; 
+trials = [trials, table(nancol,nancol,nancol,nancol,nancol,nancol,nancol,nancol,'VariableNames',...
+    {'t_stim_vis_on','t_stim_vis_off','t_stim_aud_on','t_stim_aud_off','t_go_vis_on','t_go_aud_on','t_go_aud_off','go_delay'})]; 
