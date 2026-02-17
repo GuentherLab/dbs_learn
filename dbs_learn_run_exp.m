@@ -25,26 +25,31 @@ paths = struct; setpaths_dbs_learn();
 op.task_computer = getenv('COMPUTERNAME'); 
 
 %% audio device setup
-field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
+field_default('op','sub','qqq'); 
+field_default('op','sestask', 'subsyl_trainA'); 
+% field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
+% field_default('op','task', 'famil'), 
+field_default('op','max_repeated_trials', 3); 
+field_default('op','record_audio', 0); 
 field_default('op','require_keypress_every_trial',0); % if true, experimenter must press any key at end of trial to proceed to next trial
 field_default('op','vis_offset_to_go',[0.25, 0.75]); % min and max of delay (jittered) between visual offset and GO cue presentation
 field_default('op','ntrials_between_breaks',50); 
 field_default('op','ortho_font_size',50);
 field_default('op','is_dbs_run',0); % if yes, will try to send beacon pulses for syncing
 field_default('op','visual', 'orthography'), 
-field_default('op','subject','TEST01'), 
-field_default('op','task', 'famil'), 
 field_default('op','deviceHead','')      
 field_default('op','beepoffset',0.1)   
+field_default('op','subj_n_syls',7)   
 
 % starting clock
 CLOCKp = ManageTime('start');
 TIME_PREPARE = 0.5; % Waiting period before experiment begin (sec)
 runtimer = tic; % timer for elapsed time in this run
 
+[trials, op] = generate_trial_table(op); 
 paths.data_sub = [paths.data, filesep, op.sub]; 
 paths.data_ses_beh = [paths.data_sub, filesep, op.ses, filesep, 'beh']; % behavioral data folder for the session (most outputs of this script)
-[trials, op] = generate_trial_table(op); 
+paths.data_ses_audvid = [paths.data_sub, filesep, op.ses, filesep, 'audio-video']; 
 
 % set session-specific timing params
 %%% op.gobeep_to_next_trial is the speech window - time between GO cue onset and when the next trial's stim is presented
@@ -54,7 +59,7 @@ switch op.ses
         op.gobeep_to_next_trial = 4; 
     case 'multisyl'
         op.vis_stim_dur = 3; % maximum audio stim length (at 7 syllables) is 2.8sec
-        op.gobeep_to_next_trial = 5; 
+        op.gobeep_to_next_trial = 5.5; 
 end
 
 
@@ -93,6 +98,16 @@ set(annoStr.Stim, 'Visible','on');
 %% AUDIO SETUP
 % modify the below function based on the task computer and audio devices you are using
 aud = setup_audio_devices(); 
+
+% if op.record_audio
+%     paths.aud_record_filename_1 = [paths.data_ses_audvid, filesep, filestr,'audrec_1.wav'];
+%     paths.aud_record_filename_2 = [paths.data_ses_audvid, filesep, filestr,'audrec_2.wav'];
+% 
+%     aud_record_obj_1 = parfeval(@recordMonoDevice, 0, ...
+%        aud, paths.aud_record_filename_1);
+% 
+% end
+
 
  % load the stim audio in this table and play them, rather than loading them on every trial
 stim_audio = table;

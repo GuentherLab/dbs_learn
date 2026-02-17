@@ -23,20 +23,25 @@ auddevs = audiodevinfo;
 % % % % else
     switch computername
         case '677-GUE-WL-0010'  % AM work laptop - Thinkpad X1
-            if any(contains(devs_out,'Headphones (WF-C500)') ) % if using bluetooth headphones
+            if any(contains(devs_out,'Focusrite'))
+                aud.device_out = 'Speakers (Focusrite USB Audio)'; 
+                aud.device_in_1 = 'Analogue 1 + 2 (Focusrite USB Audio)';
+                aud.device_in_1 = 'Analogue 1 + 2 (Focusrite USB Audio)';
+            
+            elseif any(contains(devs_out,'Headphones (WF-C500)') ) % if using bluetooth headphones
 
-                aud.device_in = 'Default';
+                aud.device_in_1 = 'Default';
                 aud.device_out = 'Headphones (WF-C500)'; 
                     % aud.device_out = 'Headset (WF-C500)'; 
             else % Thinkpad X1 without headphones
-                aud.device_in = 'Microphone'; 
-                aud.device_out = 'Realtek'; 
+                aud.device_in = 'Microphone Array (Intel® Smart Sound Technology for Digital Microphones)'; 
+                aud.device_out = 'Speakers (Realtek(R) Audio)'; 
                     % aud.device_out = 'ARZOPA'; % portable screen speakers
             end
         case 'AMSMEIER' % AM strix laptop
             if any(contains(devs_out,'Speakers (Realtek(R) Audio) (Windows DirectSound)')) 
                 aud.device_out = 'Speakers (Realtek(R) Audio)';
-                aud.device_in = 'Microphone Array (Realtek(R) Audio)'; 
+                aud.device_in_1 = 'Microphone Array (Realtek(R) Audio)'; 
             end
 
         % % % case {'MSI','amsmeier'} % AM laptop
