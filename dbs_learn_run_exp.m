@@ -12,10 +12,7 @@
 
 function dbs_learn_run_exp(op)
 
-
-
 starting_trial = 1; %%% if not ==1, currently causes a crash when compiling trial data at end of run
-
 FLAG_SEND_EVENT_STIM_ONSET = 1;
 
 
@@ -28,9 +25,6 @@ paths = struct; setpaths_dbs_learn();
 op.task_computer = getenv('COMPUTERNAME'); 
 
 %% audio device setup
-
-
-
 field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
 field_default('op','require_keypress_every_trial',0); % if true, experimenter must press any key at end of trial to proceed to next trial
 field_default('op','vis_offset_to_go',[0.25, 0.75]); % min and max of delay (jittered) between visual offset and GO cue presentation
@@ -48,20 +42,6 @@ CLOCKp = ManageTime('start');
 TIME_PREPARE = 0.5; % Waiting period before experiment begin (sec)
 runtimer = tic; % timer for elapsed time in this run
 
-% % % % % % % timing params inherited from FLVoice_run.m.... a lot of these descriptions won't be meaningful outside the fmri context :
-% % % % % % %       timePostStim                : time (s) from end of the audio stimulus presentation to the GO signal (D1 in schematic above) (one value for fixed time, two values for minimum-maximum range of random times) [.25 .75] 
-% % % % % % %       timePostOnset               : time (s) from subject's voice onset to the scanner trigger (or to pre-stimulus segment, if scan=false) (D2 in schematic above) (one value for fixed time, two values for minimum-maximum range of random times) [4.5] 
-% % % % % % %       timeMax                     : maximum time (s) before GO signal and scanner trigger (or to pre-stimulus segment, if scan=false) (D3 in schematic above) (recording portion in a trial may end before this if necessary to start scanner) [5.5] 
-% % % % % % %       timePreStim                 : time (s) from end of scan to start of next trial stimulus presentation (D5 in schematic above) (one value for fixed time, two values for minimum-maximum range of random times) [.25] 
-% % % % % % %       timePostSound               : time (s) from end of sound stimulus to the end of orthographic presentation
-% % % % % % field_default('op','timePostStim', [.25 .75]), 
-% % % % % % field_default('op','timePostOnset', 4.5), 
-% % % % % % field_default('op','timePreStim', .25), 
-% % % % % % field_default('op','timeMax', 5.5), 
-% % % % % % field_default('op','timePostSound', .47), 
-
-
-
 paths.data_sub = [paths.data, filesep, op.sub]; 
 paths.data_ses_beh = [paths.data_sub, filesep, op.ses, filesep, 'beh']; % behavioral data folder for the session (most outputs of this script)
 [trials, op] = generate_trial_table(op); 
@@ -74,7 +54,7 @@ switch op.ses
         op.gobeep_to_next_trial = 4; 
     case 'multisyl'
         op.vis_stim_dur = 3; % maximum audio stim length (at 7 syllables) is 2.8sec
-        op.gobeep_to_next_trial = 4; 
+        op.gobeep_to_next_trial = 5; 
 end
 
 
@@ -96,7 +76,7 @@ end
 filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.run), '_']; % this string gets used in a variety of files associated with this run
 
 % specifying paths for this run
-paths.run_exp_op_file = [paths.data_ses_beh, filesep, filestr,'run-exp-op.tsv'];
+paths.run_exp_op_file = [paths.data_ses_beh, filesep, filestr,'run-exp-op.mat'];
 paths.audio_stim_ses = [paths.code_dbs_learn, filesep, 'stimuli', filesep, 'audio-',op.ses]; 
 paths.audio_stim_task = [paths.audio_stim_ses, filesep, op.task]; % contains the main audio stim files for this task
 paths.trial_info_file = [paths.data_ses_beh, filesep, filestr,'trials.tsv'];
@@ -303,6 +283,7 @@ for itrial = starting_trial:op.ntrials
     ManageTime('wait', CLOCK, TIME_VIS_STIM_OFF);
     if strcmp(op.visual, 'orthography')
         set(annoStr.Stim, 'Visible','off');
+        set(annoStr.Plus, 'color',[1 1 1]);
         set(annoStr.Plus, 'Visible','on');
         drawnow;
         trials.t_stim_vis_off(itrial) = ManageTime('current', CLOCK);
