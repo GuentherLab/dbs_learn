@@ -40,6 +40,7 @@ field_default('op','require_keypress_every_trial',0); % if true, experimenter mu
 field_default('op','vis_offset_to_go',[0.25, 0.75]); % min and max of delay (jittered) between visual offset and GO cue presentation
 field_default('op','ntrials_between_breaks',50); 
 field_default('op','ortho_font_size',75); % 80 font size is max that will fit on 1920x1080 screen for 7syl
+field_default('op','visual','orthography'); 
 field_default('op','is_dbs_run',1); % if yes, will try to send beacon pulses for syncing
 field_default('op','visual', 'orthography'), 
 field_default('op','deviceHead','')      
@@ -62,9 +63,17 @@ switch op.ses
     case 'subsyl'
         op.vis_stim_dur = 1.5; % 1.5s is similar to vis stim from intrasurgical experiment in richardson lab
         op.gobeep_to_next_trial = 4; 
-    case 'multisyl'
+    case 'multisyl'  
         op.vis_stim_dur = 3; % maximum audio stim length (at 7 syllables) is 2.8sec
         op.gobeep_to_next_trial = 6; 
+end
+
+% if forward digit span task, always require keypress on every trial 
+%%%%%  (so we can score it online and end when an error occurs)
+% do not show orthography during FDS (this task usually is audio-only) 
+if op.task=="fds"
+    op.require_keypress_every_trial = 1;
+    op.visual = 'fixpoint'; 
 end
 
 %%%% parameters for sync pulses sent to CED computer [set by Zeyang]
@@ -193,6 +202,7 @@ end
 % save paths and audio info into ops struct
 op.paths_run_exp = paths; 
 op.audiodev = aud; 
+op % show options on command line
 save(paths.run_exp_op_file, 'op'); % save ops structure, including paths
 
 %% Main trial loop
@@ -269,13 +279,12 @@ for itrial = starting_trial:op.ntrials
     % can tblEvt be saved as a .tsv table rather than mat? can it be combined with the beacon times table? 
 
     if FLAG_SEND_EVENT_STIM_ONSET
-        try
-            [evt_,evtCode_] = send_event([1],[],0.1,0.04,1,'Dev2');
-            evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
-            % ## Ideally, we should move the following to the end of trial ##
-            tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
-            save(paths.trig_events_tab_fname, 'tblEvt');
-        end
+        % code 3 => sending on DI port 3 of Dev 2
+        [evt_,evtCode_] = send_event([3],[],0.1,0.04,1,'Dev2'); 
+        evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
+        % ## Ideally, we should move the following to the end of trial ##
+        tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
+        save(paths.trig_events_tab_fname, 'tblEvt');
     end
     %% <<<
     
@@ -283,9 +292,14 @@ for itrial = starting_trial:op.ntrials
 
    
     % show stim orthography
-    set(annoStr.Plus, 'Visible','off');
-    set(annoStr.Stim, 'String', trials.name{itrial});
-    set(annoStr.Stim, 'Visible','on');
+    if strcmp(op.visual, 'orthography')
+        set(annoStr.Plus, 'Visible','off');
+        set(annoStr.Stim, 'String', trials.name{itrial});
+        set(annoStr.Stim, 'Visible','on');
+    elseif strcmp(op.visual, 'fixpoint')
+        set(annoStr.Plus, 'Visible','on'); % leave fixcross on screen
+        set(annoStr.Plus, 'color', 'w'); % turn cross white while playing audio stim; indicate to not speak during stim
+    end
     drawnow;
     trials.t_stim_vis_on(itrial) = ManageTime('current', CLOCK);
 
@@ -345,8 +359,10 @@ for itrial = starting_trial:op.ntrials
     % ... this beep-off time is exactly as accurate as the beep-on measurement
     trials.t_go_aud_off(itrial) = trials.t_go_aud_on(itrial) + op.beep_dur; 
 
-    if strcmp(op.visual, 'fixpoint'),set(annoStr.Plus, 'color','g');drawnow;end
-    if strcmp(op.visual, 'orthography'),set(annoStr.Plus, 'color','g');drawnow;end
+    if strcmp(op.visual, 'fixpoint') || strcmp(op.visual, 'orthography')
+        set(annoStr.Plus, 'color','g');
+        drawnow;
+    end
     if ~ok, fprintf('i am late for this trial TIME_GOSIGNAL_START\n'); end
 
     % show green cross ASAP after starting to play GO beep
