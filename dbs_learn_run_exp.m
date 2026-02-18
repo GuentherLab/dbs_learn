@@ -21,21 +21,26 @@ system(sprintf('wmic process where processid=%d call setpriority "high priority"
 
 close all force
 
+parpool_obj = gcp('nocreate');
+if ~isempty(parpool_obj)
+    cancel(parpool_obj.FevalQueue.RunningFutures);   % new-style futures queue (R2022b+)
+end
+
 paths = struct; setpaths_dbs_learn();
 op.task_computer = getenv('COMPUTERNAME'); 
 
 %% audio device setup
 field_default('op','sub','qqq'); 
-field_default('op','sestask', 'subsyl_trainA'); 
+field_default('op','sestask', 'subsyl_famil'); 
 % field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
 % field_default('op','task', 'famil'), 
 field_default('op','max_repeated_trials', 3); 
-field_default('op','record_audio', 0); 
+field_default('op','record_audio', 1); 
 field_default('op','require_keypress_every_trial',0); % if true, experimenter must press any key at end of trial to proceed to next trial
 field_default('op','vis_offset_to_go',[0.25, 0.75]); % min and max of delay (jittered) between visual offset and GO cue presentation
 field_default('op','ntrials_between_breaks',50); 
-field_default('op','ortho_font_size',50);
-field_default('op','is_dbs_run',0); % if yes, will try to send beacon pulses for syncing
+field_default('op','ortho_font_size',75); % 80 font size is max that will fit on 1920x1080 screen for 7syl
+field_default('op','is_dbs_run',1); % if yes, will try to send beacon pulses for syncing
 field_default('op','visual', 'orthography'), 
 field_default('op','deviceHead','')      
 field_default('op','beepoffset',0.1)   
@@ -59,9 +64,13 @@ switch op.ses
         op.gobeep_to_next_trial = 4; 
     case 'multisyl'
         op.vis_stim_dur = 3; % maximum audio stim length (at 7 syllables) is 2.8sec
-        op.gobeep_to_next_trial = 5.5; 
+        op.gobeep_to_next_trial = 6; 
 end
 
+%%%% parameters for sync pulses sent to CED computer [set by Zeyang]
+op.pulse.interval = 0.4; 
+op.pulse.count = 3; 
+op.pulse.duration = 0.05; 
 
 if ~exist(paths.data_ses_beh, 'dir')
     mkdir(paths.data_ses_beh)
@@ -99,14 +108,19 @@ set(annoStr.Stim, 'Visible','on');
 % modify the below function based on the task computer and audio devices you are using
 aud = setup_audio_devices(); 
 
-% if op.record_audio
-%     paths.aud_record_filename_1 = [paths.data_ses_audvid, filesep, filestr,'audrec_1.wav'];
-%     paths.aud_record_filename_2 = [paths.data_ses_audvid, filesep, filestr,'audrec_2.wav'];
-% 
-%     aud_record_obj_1 = parfeval(@recordMonoDevice, 0, ...
-%        aud, paths.aud_record_filename_1);
-% 
-% end
+if op.record_audio
+    if ~exist(paths.data_ses_audvid, 'dir')
+        mkdir(paths.data_ses_audvid) %%%% recording function fails if the dir doesn't already exist
+    end
+    paths.aud_record_filename_1 = [paths.data_ses_audvid, filesep, filestr,'audrec_1.wav'];
+    paths.aud_record_filename_2 = [paths.data_ses_audvid, filesep, filestr,'audrec_2.wav'];
+
+    aud_record_obj_1 = parfeval(@recordMonoDevice, 0, ...
+       aud.device_in_1, paths.aud_record_filename_1);
+    aud_record_obj_2 = parfeval(@recordMonoDevice, 0, ...
+       aud.device_in_2, paths.aud_record_filename_2);
+
+end
 
 
  % load the stim audio in this table and play them, rather than loading them on every trial
@@ -145,7 +159,6 @@ CLOCK=[];                               % Main clock (not yet started)
 
 
 %% BEACON SYNC SETUP......  can we make beacon times into a tsv file instead of mat file? 
-
 if op.is_dbs_run
     %%% send signal to percept here
     %%%%% give option for experimenter to send more pulses to calibrate
@@ -155,7 +168,7 @@ if op.is_dbs_run
     paths.beacon_times_fname = [paths.data_ses_beh, filesep, filestr,'beacon-times.mat'];
     %<<<
     while repeat_beacon
-        beacon_times = [beacon_times, test_Beacon(0.4,0.05,5)];
+        beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
         save(paths.beacon_times_fname, 'beacon_times');
         answer = questdlg('Repeat pulse or proceed to experiment?','','Repeat pulse','Proceed to experiment','Repeat pulse');
         if char(answer) == "Proceed to experiment"
@@ -163,12 +176,13 @@ if op.is_dbs_run
         end
     end
    
-    pause()
+    % pause()
 end
 %>>> ZY addition
 % # Initialize Taskcontrol
 taskState = struct('task_isRunning',true,'pause_requested',false,'pause_isActive',false);
-figTC=taskControlGUI_release(taskState);
+figTC=taskControlGUI_release(taskState,op.pulse,paths.beacon_times_fname,beacon_times);
+
 % # Initialize EvtTime
 if FLAG_SEND_EVENT_STIM_ONSET
     evt = []; evtCode = [];
@@ -196,20 +210,26 @@ for itrial = starting_trial:op.ntrials
     ok=ManageTime('wait', CLOCK, TIME_STIM_START);
 
     if (mod(itrial,op.ntrials_between_breaks) == 0) && (itrial ~= op.ntrials)  % Break after every X trials, but not on the last
-        pause()
+        fprintf(['Scheduled break at every ', num2str(op.ntrials_between_breaks), ' trial\n'])
 
         if op.is_dbs_run
             %%% send signal to percept here
-            beacon_times = [beacon_times, test_Beacon(0.4,0.05,5)];
-            save(paths.beacon_times_fname,'beacon_times');
+            fprintf([ 'Press any key to send pulses.... \n'])
             pause()
-        end
 
+            beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
+            save(paths.beacon_times_fname,'beacon_times'); %%%% redundant - ok to delete
+
+            writematrix(beacon_times,strrep(paths.beacon_times_fname,'.mat','.tsv'),'FileType','text','Delimiter','tab')
+            
+        end
+        fprintf([ 'Press any key to resume next trial. \n'])
+        pause()
     end
     %% >>>> ZY addition
     % check task control
     if ~exist('figTC','var') || ~ishandle(figTC)
-        figTC=taskControlGUI_release(taskState);
+        figTC=taskControlGUI_release(taskState,op.pulse,paths.beacon_times_fname,beacon_times);
     end
     ud = get(figTC,'UserData'); taskState = ud.taskState;
     if taskState.pause_requested
@@ -228,6 +248,11 @@ for itrial = starting_trial:op.ntrials
         taskState.pause_isActive = 0; % no longer in pause
         ud.taskState = taskState; set(figTC,'UserData',ud); 
         ud.updateGUIBasedOnTaskState();
+        % saving updated beaconTimes
+        if length(ud.beacon_times)>=length(beacon_times)
+            beacon_times = ud.beacon_times;
+            save(paths.beacon_times_fname,'beacon_times'); %%%% redundant - ok to delete
+        end
         fprintf('Task Resumed ...\n')
     end
     %<<<
@@ -345,13 +370,12 @@ for itrial = starting_trial:op.ntrials
 
 end
 
-release(headwrite);
-release(beepread);
+
+
 
 
 
 %% end of experiment
-close all
 
 % experiment time
 op.elapsed_time = toc(runtimer)/60;    % elapsed time of the experiment
@@ -360,9 +384,18 @@ fprintf('\nElapsed Time: %f (min)\n', op.elapsed_time)
 
 fprintf('Press any key to send final sync pulses and end this experimental phase')
 pause()
-beacon_times = [beacon_times, test_Beacon(0.4,0.05,5)];
-    save(paths.beacon_times_fname,'beacon_times');
+beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
+save(paths.beacon_times_fname,'beacon_times');
 
+% pause to make sure audio stim have finished playing, then close audio writer objects
+pause(1)
+release(headwrite);
+release(beepread);
+
+cancel(aud_record_obj_1)
+cancel(aud_record_obj_2)
+
+close all
 
    
 end

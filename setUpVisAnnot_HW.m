@@ -4,6 +4,11 @@ function annoStr = setUpVisAnnot_HW(bg)
 % stimulus visualization / presentation.
 %
 
+%%%%%%% DEBUGGING ( AM 2026/2/17 ) 
+% with a 2-monitor setup, things may go wrong if you have different resolutions on each monitor
+% .... try to set them to the same resolution
+% having 'scale' in windows display settings set to anything other than 100% may also cause problems
+
 HW_testing = false;
 
 if nargin<1||isempty(bg), bg = [0 0 0]; end
@@ -14,6 +19,7 @@ monitorSize = get(0, 'Monitor');
 numMon = size(monitorSize, 1);
 
 if numMon == 2
+    % % % % % % % [left             bottom          width               height]
     figPosition = [monitorSize(2,1) monitorSize(2,2) monitorSize(2,3) monitorSize(2,4)];
 else
     W = monitorSize(1, 3);
@@ -40,10 +46,10 @@ stimAnoPos = getPos(stimAnoD, winPos);
 
 %% Actually create the stim presentation figure
 % this causes the stim window to appear
-VBFig = figure('NumberTitle', 'off', 'Color', bg, 'Position', winPos, 'MenuBar', 'none');
+VBFig = figure('NumberTitle', 'off', 'Color', bg, 'OuterPosition', winPos, 'MenuBar', 'none');
 drawnow; 
 if ~HW_testing
-    if ~isequal(get(VBFig,'position'),winPos), set(VBFig,'Position',winPos); end % fix needed only on some dual monitor setups
+    if ~isequal(get(VBFig,'position'),winPos), set(VBFig,'OuterPosition',winPos); end % fix needed only on some dual monitor setups
 end
 
 % Common annotation settings

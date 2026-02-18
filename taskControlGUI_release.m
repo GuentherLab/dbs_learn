@@ -1,5 +1,5 @@
-function figTC=taskControlGUI(taskState)
-    
+function figTC=taskControlGUI(taskState,pulseParam,beacon_times_filepath,beacon_times)
+
     pause_requested = taskState.pause_requested;
     pause_isActive = taskState.pause_isActive;
     task_isRunning = taskState.task_isRunning;
@@ -13,7 +13,7 @@ function figTC=taskControlGUI(taskState)
     % Create a figure for the GUI
     figTC = figure('Name', 'Task Control', 'NumberTitle', 'off', ...
                  'Position', [100, 100, 400, 200], 'Tag', 'TaskControlGUI');
-    ud = []; ud.taskState = taskState;
+    ud = []; ud.taskState = taskState; ud.beacon_times = beacon_times;
     set(figTC,'UserData',ud);
     % Pause button
     btnPause = uicontrol('Style', 'pushbutton', 'String', getPauseButtonText(), ...
@@ -47,7 +47,7 @@ function figTC=taskControlGUI(taskState)
     set(figTC,'UserData',ud);
 
     set(btnSendEvent, 'Enable', 'off');
-    set(btnSendPCPSync, 'Enable', 'off');
+    set(btnSendPCPSync, 'Enable', 'on');
     set(edtEventCode, 'Enable', 'off');
 
 
@@ -108,10 +108,13 @@ function figTC=taskControlGUI(taskState)
     end
     
     function sendPCPSync(~, ~)
-        set(btnSendPCPSync, 'BackgroundColor', 'light yellow');
+        set(btnSendPCPSync, 'BackgroundColor', [255, 222, 33]/255);
         drawnow; % Update the UI immediately
         % Simulate the sending process
-        send_event('argD', 'argE', 'argF'); % Assuming send_event function is reusable
+        beacon_times = [beacon_times, test_Beacon(pulseParam.interval,pulseParam.duration,pulseParam.count)];
+        ud.beacon_times = beacon_times
+        set(figTC,'UserData',ud)
+        %send_event('argD', 'argE', 'argF'); % Assuming send_event function is reusable
         set(btnSendPCPSync, 'BackgroundColor', 'default');
     end
 end

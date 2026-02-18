@@ -26,7 +26,7 @@ auddevs = audiodevinfo;
             if any(contains(devs_out,'Focusrite'))
                 aud.device_out = 'Speakers (Focusrite USB Audio)'; 
                 aud.device_in_1 = 'Analogue 1 + 2 (Focusrite USB Audio)';
-                aud.device_in_1 = 'Analogue 1 + 2 (Focusrite USB Audio)';
+                aud.device_in_2 = 'Analogue 3 + 4 (Focusrite USB Audio)';
             
             elseif any(contains(devs_out,'Headphones (WF-C500)') ) % if using bluetooth headphones
 
