@@ -179,6 +179,7 @@ if op.is_dbs_run
     while repeat_beacon
         beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
         save(paths.beacon_times_fname, 'beacon_times');
+        writematrix(beacon_times,strrep(paths.beacon_times_fname,'.mat','.tsv'),'FileType','text','Delimiter','tab')
         answer = questdlg('Repeat pulse or proceed to experiment?','','Repeat pulse','Proceed to experiment','Repeat pulse');
         if char(answer) == "Proceed to experiment"
             repeat_beacon = 0;
@@ -224,17 +225,24 @@ for itrial = starting_trial:op.ntrials
 
         if op.is_dbs_run
             %%% send signal to percept here
-            fprintf([ 'Press any key to send pulses.... \n'])
+            %%%%% give option for experimenter to send more pulses to calibrate
+            repeat_beacon = 1;
+            beacon_times = []; 
+            paths.beacon_times_fname = [paths.data_ses_beh, filesep, filestr,'beacon-times.mat'];
+            while repeat_beacon
+                beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
+                save(paths.beacon_times_fname, 'beacon_times');
+                writematrix(beacon_times,strrep(paths.beacon_times_fname,'.mat','.tsv'),'FileType','text','Delimiter','tab')
+                answer = questdlg('Repeat pulse or continue to next experimental block?','','Repeat pulse','Continue to next block','Repeat pulse');
+                if char(answer) == "Continue to next block"
+                    repeat_beacon = 0;
+                end
+            end
+    
+        elseif ~op.is_dbs_run
+            fprintf([ 'Press any key to resume next trial. \n'])
             pause()
-
-            beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
-            save(paths.beacon_times_fname,'beacon_times'); %%%% redundant - ok to delete
-
-            writematrix(beacon_times,strrep(paths.beacon_times_fname,'.mat','.tsv'),'FileType','text','Delimiter','tab')
-            
         end
-        fprintf([ 'Press any key to resume next trial. \n'])
-        pause()
     end
     %% >>>> ZY addition
     % check task control
