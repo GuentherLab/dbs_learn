@@ -39,7 +39,6 @@ field_default('op','record_audio', 1);
 field_default('op','require_keypress_every_trial',0); % if true, experimenter must press any key at end of trial to proceed to next trial
 field_default('op','vis_offset_to_go',[0.25, 0.75]); % min and max of delay (jittered) between visual offset and GO cue presentation
 field_default('op','ntrials_between_breaks',50); 
-field_default('op','ortho_font_size',75); % 80 font size is max that will fit on 1920x1080 screen for 7syl
 field_default('op','visual','orthography'); 
 field_default('op','is_dbs_run',1); % if yes, will try to send beacon pulses for syncing
 field_default('op','visual', 'orthography'), 
@@ -63,9 +62,11 @@ switch op.ses
     case 'subsyl'
         op.vis_stim_dur = 1.5; % 1.5s is similar to vis stim from intrasurgical experiment in richardson lab
         op.gobeep_to_next_trial = 4; 
+        field_default('op','ortho_font_size',150); % 
     case 'multisyl'  
         op.vis_stim_dur = 3; % maximum audio stim length (at 7 syllables) is 2.8sec
         op.gobeep_to_next_trial = 6; 
+        field_default('op','ortho_font_size',75); % 80 font size is max that will fit on 1920x1080 screen for 7syl
 end
 
 % if forward digit span task, always require keypress on every trial 
