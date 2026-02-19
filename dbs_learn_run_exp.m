@@ -227,6 +227,8 @@ for itrial = starting_trial:op.ntrials
         if op.is_dbs_run
             %%% send signal to percept here
             %%%%% give option for experimenter to send more pulses to calibrate
+            fprintf([ 'Press any key to send pulses.... \n'])
+            pause() %  pause for keyboard intput so we don't send send pauses during the end of the preceding trial
             repeat_beacon = 1;
             beacon_times = []; 
             paths.beacon_times_fname = [paths.data_ses_beh, filesep, filestr,'beacon-times.mat'];
