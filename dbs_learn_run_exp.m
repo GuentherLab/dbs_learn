@@ -230,8 +230,8 @@ for itrial = starting_trial:op.ntrials
             fprintf([ 'Press any key to send pulses.... \n'])
             pause() %  pause for keyboard intput so we don't send send pauses during the end of the preceding trial
             repeat_beacon = 1;
-            beacon_times = []; 
-            paths.beacon_times_fname = [paths.data_ses_beh, filesep, filestr,'beacon-times.mat'];
+            %beacon_times = []; 
+            %paths.beacon_times_fname = [paths.data_ses_beh, filesep, filestr,'beacon-times.mat'];
             while repeat_beacon
                 beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
                 save(paths.beacon_times_fname, 'beacon_times');
