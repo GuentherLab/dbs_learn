@@ -11,16 +11,6 @@ auddevs = audiodevinfo;
     devs_in = {auddevs.input.Name};
     devs_out = {auddevs.output.Name};
 
-% % % %  % default device names do not have to be full device names, just need to be included in a single device name
-% % % % if any(contains(devs_out,'Focusrite') )  % Full experimental setup with Focusrite
-% % % %         aud.device_in = 'Focusrite';
-% % % %         aud.device_out = 'Focusrite';
-% % % % elseif any(contains(devs_out,'Speakers (Logitech G432 Gaming Headset)') ) % this name might instead be 'Speakers (G432 Gaming Headset)' if GHub is not installed
-% % % %     % if G432 is available, use it for input and output...
-% % % %     % .... if using Eprom instead, use 3.5mm jack  
-% % % %     aud.device_in = 'Microphone (Logitech G432 Gaming Headset)';
-% % % %     aud.device_out = 'Speakers (Logitech G432 Gaming Headset)'; 
-% % % % else
     switch computername
         case '677-GUE-WL-0010'  % AM work laptop - Thinkpad X1
             if any(contains(devs_out,'Focusrite'))
@@ -34,7 +24,7 @@ auddevs = audiodevinfo;
                 aud.device_out = 'Headphones (WF-C500)'; 
                     % aud.device_out = 'Headset (WF-C500)'; 
             else % Thinkpad X1 without headphones
-                aud.device_in = 'Microphone Array (Intel® Smart Sound Technology for Digital Microphones)'; 
+                aud.device_in_1 = 'Microphone Array (Intel® Smart Sound Technology for Digital Microphones)'; 
                 aud.device_out = 'Speakers (Realtek(R) Audio)'; 
                     % aud.device_out = 'ARZOPA'; % portable screen speakers
             end

@@ -127,8 +127,10 @@ if op.record_audio
 
     aud_record_obj_1 = parfeval(@recordMonoDevice, 0, ...
        aud.device_in_1, paths.aud_record_filename_1);
-    aud_record_obj_2 = parfeval(@recordMonoDevice, 0, ...
-       aud.device_in_2, paths.aud_record_filename_2);
+    if isfield(aud,'device_in_2')
+        aud_record_obj_2 = parfeval(@recordMonoDevice, 0, ...
+           aud.device_in_2, paths.aud_record_filename_2);
+    end
 
 end
 
