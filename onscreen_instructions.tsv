@@ -1,0 +1,9 @@
+ses	task	instructions
+subsyl	"famil, pretest, trainA, trainB, test1, test2"	"When a syllable appears on this screen,; wait for the beep,; then repeat it it as quickly; and accurately as possible."
+multisyl	"famil, assess, pretest, trainA, trainB, test1, test2"	"When a sequence of sounds appears on this screen,; wait for the beep,; then repeat it it as quickly; and accurately as possible."
+"subsyl, multisyl"	fds	"You will hear a sequence of numbers ; After the beep, ; repeat that sequence"
+"subsyl, multisyl"	base-controlled	"Please relax, stay still,; and remain silent "
+"subsyl, multisyl"	base-free	"Please relax, speak normally,; and move freely "
+"subsyl, multisyl"	reading	"When text appears,; read it aloud; Stop reading when the text disappears"
+"subsyl, multisyl"	hand-oc	"When the green cross appears,;  open and close both hands;  until the green cross disappears"
+"subsyl, multisyl"	reading-hand-oc	"When the next text appears,; read the text;  while opening and closing both hands "

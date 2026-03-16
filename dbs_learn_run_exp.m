@@ -9,11 +9,14 @@
 %   trials table .tsv - contains event times, stim info; saved every trial
 %   op .mat - contains options structure and other info not specific to individual trials
 %   beacon times and beacon event table file
+%
+% options for op.task:
+%   trialed speech tasks: 'famil','assess','pretest','trainA','trainB','test1','test2','fds'
+%   untrialed tasks: 'base-controlled','base-free','reading','hand-oc','reading-hand-oc'
 
 function dbs_learn_run_exp(op)
 
 starting_trial = 1; %%% if not ==1, currently causes a crash when compiling trial data at end of run
-FLAG_SEND_EVENT_STIM_ONSET = 1;
 
 
 % set priority for matlab to high for running experiments
@@ -31,9 +34,8 @@ op.task_computer = getenv('COMPUTERNAME');
 
 %% audio device setup
 field_default('op','sub','qqq'); 
-field_default('op','sestask', 'subsyl_famil'); 
-% field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
-% field_default('op','task', 'famil'), 
+field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
+field_default('op','task', 'famil'), 
 field_default('op','max_repeated_trials', 3); 
 field_default('op','record_audio', 1); 
 field_default('op','require_keypress_every_trial',0); % if true, experimenter must press any key at end of trial to proceed to next trial
@@ -51,7 +53,7 @@ CLOCKp = ManageTime('start');
 TIME_PREPARE = 0.5; % Waiting period before experiment begin (sec)
 runtimer = tic; % timer for elapsed time in this run
 
-[trials, op] = generate_trial_table(op); 
+
 paths.data_sub = [paths.data, filesep, op.sub]; 
 paths.data_ses_beh = [paths.data_sub, filesep, op.ses, filesep, 'beh']; % behavioral data folder for the session (most outputs of this script)
 paths.data_ses_audvid = [paths.data_sub, filesep, op.ses, filesep, 'audio-video']; 
@@ -88,7 +90,8 @@ end
 
 
 % Check existing trial info files to increment run ID for this session
-allEventFiles = dir([paths.data_ses_beh, filesep, '*_trials.tsv']);
+
+allEventFiles = dir([paths.data_ses_beh, filesep, '*_run-exp-op.mat']);
 if ~isempty(allEventFiles)
     prevRunIds = regexp({allEventFiles.name}, '_run-(\d+)_', 'tokens', 'ignorecase');
     prevRunIds = cellfun(@(x) str2double(x{1,1}), prevRunIds, 'UniformOutput', true);
@@ -101,10 +104,8 @@ filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.r
 
 % specifying paths for this run
 paths.run_exp_op_file = [paths.data_ses_beh, filesep, filestr,'run-exp-op.mat'];
-paths.audio_stim_ses = [paths.code_dbs_learn, filesep, 'stimuli', filesep, 'audio-',op.ses]; 
-paths.audio_stim_task = [paths.audio_stim_ses, filesep, op.task]; % contains the main audio stim files for this task
-paths.trial_info_file = [paths.data_ses_beh, filesep, filestr,'trials.tsv'];
-writetable(trials, paths.trial_info_file , 'Delimiter', '\t', 'FileType', 'text')
+
+
 
 
 % visual setup
@@ -113,6 +114,10 @@ annoStr.Stim.FontSize = op.ortho_font_size;
 set(annoStr.Stim, 'String', 'Preparing...');
 set(annoStr.Stim, 'Visible','on');
 
+% load instructions
+instruct_tab = readtable([paths.code_dbs_learn, filesep, 'onscreen_instructions.tsv'],'FileType','text','Delimiter','tab');
+rowmatch = contains(instruct_tab.ses,op.ses) & contains(instruct_tab.task,op.task);
+op.instructions = instruct_tab.instructions{rowmatch}; clear rowmatch instruct_tab
 
 %% AUDIO SETUP
 % modify the below function based on the task computer and audio devices you are using
@@ -134,20 +139,9 @@ if op.record_audio
 
 end
 
-
- % load the stim audio in this table and play them, rather than loading them on every trial
-stim_audio = table;
-stim_audio.filename = cellfun(@(x)[paths.audio_stim_task, filesep, x,'.wav'], unique(trials.name, 'stable'), 'uni', 0); 
-stim_audio.name = cellfun(@(x)getfname(x), stim_audio.filename, 'uni', 0); 
-
-ok=cellfun(@(x)exist(x,'file'), stim_audio.filename); 
-assert(all(ok), 'unable to find files %s', sprintf('%s ',stim_audio.filename{~ok}));
-
-[stim_audio.audio,stim_audio.fs]=cellfun(@audioread, stim_audio.filename,'uni',0);
-stim_audio.stimreads=cell(size(stim_audio.filename));
-stim_audio.stimreads=cellfun(@(x)dsp.AudioFileReader(x, 'SamplesPerFrame', 2048),stim_audio.filename,'uni',0);
 sileread = dsp.AudioFileReader(fullfile(paths.stim, 'silent.wav'), 'SamplesPerFrame', 2048);
-stim_audio.dur=cellfun(@(a,b)numel(a)/b, stim_audio.audio, stim_audio.fs);
+
+
 
 % set up sound output players
 audiodevreset;
@@ -170,14 +164,20 @@ set(annoStr.Stim, 'Visible','off');     % Turn off preparation page
 CLOCK=[];                               % Main clock (not yet started)
 
 
-%% BEACON SYNC SETUP......  can we make beacon times into a tsv file instead of mat file? 
+%% BEACON SYNC SETUP......  
+
+%% AM note:  this .mat file is redunant with the .tsv - can we delete it? 
+paths.beacon_times_fname = [paths.data_ses_beh, filesep, filestr,'beacon-times.mat'];
+
+
+
 if op.is_dbs_run
     %%% send signal to percept here
     %%%%% give option for experimenter to send more pulses to calibrate
     repeat_beacon = 1;
     beacon_times = []; 
     % >>> ZY mod: moved outside of while-loop, so all events saved correctly
-    paths.beacon_times_fname = [paths.data_ses_beh, filesep, filestr,'beacon-times.mat'];
+    
     %<<<
     while repeat_beacon
         beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
@@ -190,7 +190,14 @@ if op.is_dbs_run
     end
    
     % pause()
+
+    FLAG_SEND_EVENT_STIM_ONSET = 1;
+
+elseif ~op.is_dbs_run
+    beacon_times = [];
+    FLAG_SEND_EVENT_STIM_ONSET = 0;
 end
+
 %>>> ZY addition
 % # Initialize Taskcontrol
 taskState = struct('task_isRunning',true,'pause_requested',false,'pause_isActive',false);
@@ -207,196 +214,248 @@ end
 op.paths_run_exp = paths; 
 op.audiodev = aud; 
 op % show options on command line
-save(paths.run_exp_op_file, 'op'); % save ops structure, including paths
-
-%% Main trial loop
-for itrial = starting_trial:op.ntrials
-
-    % set up trial (see subfunction at end of script)
-
-
-
-    if isempty(CLOCK)
-        CLOCK = ManageTime('start');                        % resets clock to t=0 (first-trial start-time)
-        TIME_STIM_START = 0;
-    end
+save(paths.run_exp_op_file, 'op'); % save ops structure, including paths  
     
-    ok=ManageTime('wait', CLOCK, TIME_STIM_START);
 
-    if (mod(itrial,op.ntrials_between_breaks) == 0) && (itrial ~= op.ntrials)  % Break after every X trials, but not on the last
-        fprintf(['Scheduled break at every ', num2str(op.ntrials_between_breaks), ' trial\n'])
+%% show instructions onscreen to subject if it's the first trial
+fprintf(['\n Displaying instructions onscreen: \n''''', strrep(op.instructions,';','\n'),'''''',...
+    '\n\nPress any key to proceed to task'])
+set(annoStr.Stim, 'String', split(op.instructions,';'))
+set(annoStr.Stim,'FontSize',55); 
+set(annoStr.Stim, 'Visible','on')
+pause()
 
-        if op.is_dbs_run
-            %%% send signal to percept here
-            %%%%% give option for experimenter to send more pulses to calibrate
-            fprintf([ 'Press any key to send pulses.... \n'])
-            pause() %  pause for keyboard intput so we don't send send pauses during the end of the preceding trial
-            repeat_beacon = 1;
-            %beacon_times = []; 
-            %paths.beacon_times_fname = [paths.data_ses_beh, filesep, filestr,'beacon-times.mat'];
-            while repeat_beacon
-                beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
-                save(paths.beacon_times_fname, 'beacon_times');
-                writematrix(beacon_times,strrep(paths.beacon_times_fname,'.mat','.tsv'),'FileType','text','Delimiter','tab')
-                answer = questdlg('Repeat pulse or continue to next experimental block?','','Repeat pulse','Continue to next block','Repeat pulse');
-                if char(answer) == "Continue to next block"
-                    repeat_beacon = 0;
+% remove instructions, go to fixation cross
+set(annoStr.Stim, 'Visible','off')
+set(annoStr.Plus, 'Visible','on');
+
+% set up trial (see subfunction at end of script)
+CLOCK = ManageTime('start');                        % resets clock to t=0 (first-trial start-time)
+TIME_STIM_START = 0;
+
+
+%% RUN TASKS
+
+
+switch op.task
+    case {'famil','assess','pretest','trainA','trainB','test1','test2','fds'}   % trialed speech tasks
+
+
+        [trials, op] = generate_trial_table(op); 
+        paths.audio_stim_ses = [paths.code_dbs_learn, filesep, 'stimuli', filesep, 'audio-',op.ses]; 
+        paths.audio_stim_task = [paths.audio_stim_ses, filesep, op.task]; % contains the main audio stim files for this task
+        paths.trial_info_file = [paths.data_ses_beh, filesep, filestr,'trials.tsv'];
+        writetable(trials, paths.trial_info_file , 'Delimiter', '\t', 'FileType', 'text')
+        
+         % load the stim audio in this table and play them, rather than loading them on every trial
+        stim_audio = table;
+        stim_audio.filename = cellfun(@(x)[paths.audio_stim_task, filesep, x,'.wav'], unique(trials.name, 'stable'), 'uni', 0); 
+        stim_audio.name = cellfun(@(x)getfname(x), stim_audio.filename, 'uni', 0); 
+        
+        ok=cellfun(@(x)exist(x,'file'), stim_audio.filename); 
+        assert(all(ok), 'unable to find files %s', sprintf('%s ',stim_audio.filename{~ok}));
+        
+        [stim_audio.audio,stim_audio.fs]=cellfun(@audioread, stim_audio.filename,'uni',0);
+        stim_audio.stimreads=cell(size(stim_audio.filename));
+        stim_audio.stimreads=cellfun(@(x)dsp.AudioFileReader(x, 'SamplesPerFrame', 2048),stim_audio.filename,'uni',0);
+        
+        stim_audio.dur=cellfun(@(a,b)numel(a)/b, stim_audio.audio, stim_audio.fs);
+
+        %% Main trial loop
+        for itrial = starting_trial:op.ntrials
+        
+        
+        
+            if (mod(itrial,op.ntrials_between_breaks) == 0) && (itrial ~= op.ntrials)  % Break after every X trials, but not on the last
+                fprintf(['Scheduled break at every ', num2str(op.ntrials_between_breaks), ' trial\n'])
+        
+                if op.is_dbs_run
+                    %%% send signal to percept here
+                    %%%%% give option for experimenter to send more pulses to calibrate
+                    fprintf([ 'Press any key to send pulses.... \n'])
+                    pause() %  pause for keyboard intput so we don't send send pauses during the end of the preceding trial
+                    repeat_beacon = 1;
+                    %beacon_times = []; 
+                    %paths.beacon_times_fname = [paths.data_ses_beh, filesep, filestr,'beacon-times.mat'];
+                    while repeat_beacon
+                        beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
+                        save(paths.beacon_times_fname, 'beacon_times');
+                        writematrix(beacon_times,strrep(paths.beacon_times_fname,'.mat','.tsv'),'FileType','text','Delimiter','tab')
+                        answer = questdlg('Repeat pulse or continue to next experimental block?','','Repeat pulse','Continue to next block','Repeat pulse');
+                        if char(answer) == "Continue to next block"
+                            repeat_beacon = 0;
+                        end
+                    end
+            
+                elseif ~op.is_dbs_run
+                    fprintf([ 'Press any key to resume next trial. \n'])
+                    pause()
                 end
             end
-    
-        elseif ~op.is_dbs_run
-            fprintf([ 'Press any key to resume next trial. \n'])
-            pause()
-        end
-    end
-    %% >>>> ZY addition
-    % check task control
-    if ~exist('figTC','var') || ~ishandle(figTC)
-        figTC=taskControlGUI_release(taskState,op.pulse,paths.beacon_times_fname,beacon_times);
-    end
-    ud = get(figTC,'UserData'); taskState = ud.taskState;
-    if taskState.pause_requested
-        % Create a timer that fires every second
-        % pause requested => start pause
-        taskState.pause_isActive = 1;
-        ud.taskState = taskState; set(figTC,'UserData',ud);
-        ud.updateGUIBasedOnTaskState();
-        fprintf('Task Paused from TaskControl_Panel ...\n')
-        while taskState.pause_requested 
-            pause(0.2)
+            %% >>>> ZY addition
+            % check task control
+            if ~exist('figTC','var') || ~ishandle(figTC)
+                figTC=taskControlGUI_release(taskState,op.pulse,paths.beacon_times_fname,beacon_times);
+            end
             ud = get(figTC,'UserData'); taskState = ud.taskState;
-        end
-        % resuming
-        ud = get(figTC,'UserData'); taskState = ud.taskState;
-        taskState.pause_isActive = 0; % no longer in pause
-        ud.taskState = taskState; set(figTC,'UserData',ud); 
-        ud.updateGUIBasedOnTaskState();
-        % saving updated beaconTimes
-        if length(ud.beacon_times)>=length(beacon_times)
-            beacon_times = ud.beacon_times;
-            save(paths.beacon_times_fname,'beacon_times'); %%%% redundant - ok to delete
-        end
-        fprintf('Task Resumed ...\n')
-    end
-    %<<<
-    %%
-    set(annoStr.Plus, 'Visible','on');
-
-    audiorow = strcmp(trials.name{itrial}, stim_audio.name); % find the row of the audio file to play
-    stimread = stim_audio.stimreads{audiorow};
-
-    %% >>>> ZY addition
-    % I put this before AM defines TIME_TRIAL_START, only so that I don't add additional delay to actual presentation
-    % but we can figure out a better way to integrate
-
-    % can tblEvt be saved as a .tsv table rather than mat? can it be combined with the beacon times table? 
-
-    if FLAG_SEND_EVENT_STIM_ONSET
-        % code 3 => sending on DI port 3 of Dev 2
-        [evt_,evtCode_] = send_event([3],[],0.1,0.04,1,'Dev2'); 
-        evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
-        % ## Ideally, we should move the following to the end of trial ##
-        tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
-        save(paths.trig_events_tab_fname, 'tblEvt');
-    end
-    %% <<<
-    
-
-
-   
-    % show stim orthography
-    if strcmp(op.visual, 'orthography')
-        set(annoStr.Plus, 'Visible','off');
-        set(annoStr.Stim, 'String', trials.name{itrial});
-        set(annoStr.Stim, 'Visible','on');
-    elseif strcmp(op.visual, 'fixpoint')
-        set(annoStr.Plus, 'Visible','on'); % leave fixcross on screen
-        set(annoStr.Plus, 'color', 'w'); % turn cross white while playing audio stim; indicate to not speak during stim
-    end
-    drawnow;
-    trials.t_stim_vis_on(itrial) = ManageTime('current', CLOCK);
-
-
-    % play stim sound - ASAP after visual onset
-     %%% AM note 2026/2/15: if time is measured before starting the while loop or after the first iteration of the while loop...
-     % %  ..... this is generally a 20ms difference (likely due to the size of the audio chunk being written)
-    %  % ..... commnent in the tt and ii lines to test this, and compare to trials.t_stim_on(itrial)
-     % % (running on stryx laptop)
-    trials.t_stim_aud_on(itrial) = ManageTime('current', CLOCK);
-    % ii = 0; 
-    while ~isDone(stimread); 
-        sound=stimread();
-        headwrite(sound);
-        % ii=ii+1;
-        % if ii==1
-            % tt(ii) = ManageTime('current', CLOCK); 
-        % end
-    end;
-    release(stimread);
-    reset(headwrite);
-
-    % print progress to window
-    fprintf(['Run ',num2str(op.run), ', trial ',num2str(itrial), '/',num2str(op.ntrials), ' ....... ', trials.name{itrial}, '\n'])
-
-    if ~ok, fprintf('i am late for this trial TIME_STIM_START\n'); end
-
-    % assume audio stim-off time based on audio stim-on time and audio stim duration
-    % ... this stim-off time is exactly as accurate as the stim-on measurement
-    audstimdur = stim_audio.dur(audiorow); 
-    trials.t_stim_aud_off(itrial) = trials.t_stim_aud_on(itrial) + audstimdur; 
-
-    % wait for a fixed time after visual onset, then switch back to fixation cross
-    TIME_VIS_STIM_OFF = trials.t_stim_vis_on(itrial) + op.vis_stim_dur; 
-    ManageTime('wait', CLOCK, TIME_VIS_STIM_OFF);
-    if strcmp(op.visual, 'orthography')
-        set(annoStr.Stim, 'Visible','off');
-        set(annoStr.Plus, 'color',[1 1 1]);
-        set(annoStr.Plus, 'Visible','on');
-        drawnow;
-        trials.t_stim_vis_off(itrial) = ManageTime('current', CLOCK);
-    end
-
-    % plan GO signal start time based on visual offset time
-    % .... do not base off of audio offset, because this varies depending on the number of syllables in multisyl
-    trials.go_delay(itrial) = min(op.vis_offset_to_go) + rand*diff(op.vis_offset_to_go); % get jittered time between stim offset and go cue
-    TIME_GOSIGNAL_START = trials.t_stim_vis_off(itrial)  + trials.go_delay(itrial);          % GO signal target time
-    ok=ManageTime('wait', CLOCK, TIME_GOSIGNAL_START);     % waits for GO signal time
-
-
-    %%% AM note 2026/2/15: if time is measured before or after playing the go beep, there is 5-25ms difference (running on stryx laptop)
-    %     this may be because it reads in the beep as a whole chunk 
-    trials.t_go_aud_on(itrial) = ManageTime('current', CLOCK); 
-    while ~isDone(beepread); sound=beepread();headwrite(sound);end;reset(beepread);reset(headwrite);
-
-    % assume beep-off time based on beep-on time and beep duration
-    % ... this beep-off time is exactly as accurate as the beep-on measurement
-    trials.t_go_aud_off(itrial) = trials.t_go_aud_on(itrial) + op.beep_dur; 
-
-    if strcmp(op.visual, 'fixpoint') || strcmp(op.visual, 'orthography')
-        set(annoStr.Plus, 'color','g');
-        drawnow;
-    end
-    if ~ok, fprintf('i am late for this trial TIME_GOSIGNAL_START\n'); end
-
-    % show green cross ASAP after starting to play GO beep
-    set(annoStr.Plus, 'color','g');
-    trials.t_go_vis_on(itrial) = ManageTime('current', CLOCK); 
-
-    % set the target start time for the start of the next trial's onset time
-    TIME_STIM_START = trials.t_go_aud_on(itrial) + op.gobeep_to_next_trial; 
-
-    % save timing info for this trial into the tsv 
-    writetable(trials, paths.trial_info_file , 'Delimiter', '\t', 'FileType', 'text')
-
-
-    if op.require_keypress_every_trial
-        if itrial ~= op.ntrials
-            fprintf('\n Press any key to proceed to next trial \n')
-        end
+            if taskState.pause_requested
+                % Create a timer that fires every second
+                % pause requested => start pause
+                taskState.pause_isActive = 1;
+                ud.taskState = taskState; set(figTC,'UserData',ud);
+                ud.updateGUIBasedOnTaskState();
+                fprintf('Task Paused from TaskControl_Panel ...\n')
+                while taskState.pause_requested 
+                    pause(0.2)
+                    ud = get(figTC,'UserData'); taskState = ud.taskState;
+                end
+                % resuming
+                ud = get(figTC,'UserData'); taskState = ud.taskState;
+                taskState.pause_isActive = 0; % no longer in pause
+                ud.taskState = taskState; set(figTC,'UserData',ud); 
+                ud.updateGUIBasedOnTaskState();
+                % saving updated beaconTimes
+                if length(ud.beacon_times)>=length(beacon_times)
+                    beacon_times = ud.beacon_times;
+                    save(paths.beacon_times_fname,'beacon_times'); %%%% redundant - ok to delete
+                end
+                fprintf('Task Resumed ...\n')
+            end
+            %<<<
+            %%
         
+            audiorow = strcmp(trials.name{itrial}, stim_audio.name); % find the row of the audio file to play
+            stimread = stim_audio.stimreads{audiorow};
+        
+            %% >>>> ZY addition
+            % I put this before AM defines TIME_TRIAL_START, only so that I don't add additional delay to actual presentation
+            % but we can figure out a better way to integrate
+        
+            % can tblEvt be saved as a .tsv table rather than mat? can it be combined with the beacon times table? 
+        
+            if FLAG_SEND_EVENT_STIM_ONSET
+                % code 3 => sending on DI port 3 of Dev 2
+                [evt_,evtCode_] = send_event([3],[],0.1,0.04,1,'Dev2'); 
+                evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
+                % ## Ideally, we should move the following to the end of trial ##
+                tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
+                save(paths.trig_events_tab_fname, 'tblEvt');
+            end
+            %% <<<
+            
+            % pause until target stim start time for this trial
+            ok=ManageTime('wait', CLOCK, TIME_STIM_START); 
+           
+            % show stim orthography
+            if strcmp(op.visual, 'orthography')
+                set(annoStr.Plus, 'Visible','off');
+                set(annoStr.Stim, 'String', trials.name{itrial});
+                set(annoStr.Stim,'FontSize',op.ortho_font_size)
+                set(annoStr.Stim, 'Visible','on');
+            elseif strcmp(op.visual, 'fixpoint')
+                set(annoStr.Plus, 'Visible','on'); % leave fixcross on screen
+                set(annoStr.Plus, 'color', 'w'); % turn cross white while playing audio stim; indicate to not speak during stim
+            end
+            drawnow;
+            trials.t_stim_vis_on(itrial) = ManageTime('current', CLOCK);
+        
+        
+            % play stim sound - ASAP after visual onset
+             %%% AM note 2026/2/15: if time is measured before starting the while loop or after the first iteration of the while loop...
+             % %  ..... this is generally a 20ms difference (likely due to the size of the audio chunk being written)
+            %  % ..... commnent in the tt and ii lines to test this, and compare to trials.t_stim_on(itrial)
+             % % (running on stryx laptop)
+            trials.t_stim_aud_on(itrial) = ManageTime('current', CLOCK);
+            % ii = 0; 
+            while ~isDone(stimread); 
+                sound=stimread();
+                headwrite(sound);
+                % ii=ii+1;
+                % if ii==1
+                    % tt(ii) = ManageTime('current', CLOCK); 
+                % end
+            end;
+            release(stimread);
+            reset(headwrite);
+        
+            % print progress to window
+            fprintf(['Run ',num2str(op.run), ', trial ',num2str(itrial), '/',num2str(op.ntrials), ' ....... ', trials.name{itrial}, '\n'])
+        
+            if ~ok, fprintf('i am late for this trial TIME_STIM_START\n'); end
+        
+            % assume audio stim-off time based on audio stim-on time and audio stim duration
+            % ... this stim-off time is exactly as accurate as the stim-on measurement
+            audstimdur = stim_audio.dur(audiorow); 
+            trials.t_stim_aud_off(itrial) = trials.t_stim_aud_on(itrial) + audstimdur; 
+        
+            % wait for a fixed time after visual onset, then switch back to fixation cross
+            TIME_VIS_STIM_OFF = trials.t_stim_vis_on(itrial) + op.vis_stim_dur; 
+            ManageTime('wait', CLOCK, TIME_VIS_STIM_OFF);
+            if strcmp(op.visual, 'orthography')
+                set(annoStr.Stim, 'Visible','off');
+                set(annoStr.Plus, 'color',[1 1 1]);
+                set(annoStr.Plus, 'Visible','on');
+                drawnow;
+                trials.t_stim_vis_off(itrial) = ManageTime('current', CLOCK);
+            end
+        
+            % plan GO signal start time based on visual offset time
+            % .... do not base off of audio offset, because this varies depending on the number of syllables in multisyl
+            trials.go_delay(itrial) = min(op.vis_offset_to_go) + rand*diff(op.vis_offset_to_go); % get jittered time between stim offset and go cue
+            TIME_GOSIGNAL_START = trials.t_stim_vis_off(itrial)  + trials.go_delay(itrial);          % GO signal target time
+            ok=ManageTime('wait', CLOCK, TIME_GOSIGNAL_START);     % waits for GO signal time
+        
+        
+            %%% AM note 2026/2/15: if time is measured before or after playing the go beep, there is 5-25ms difference (running on stryx laptop)
+            %     this may be because it reads in the beep as a whole chunk 
+            trials.t_go_aud_on(itrial) = ManageTime('current', CLOCK); 
+            while ~isDone(beepread); sound=beepread();headwrite(sound);end;reset(beepread);reset(headwrite);
+        
+            % assume beep-off time based on beep-on time and beep duration
+            % ... this beep-off time is exactly as accurate as the beep-on measurement
+            trials.t_go_aud_off(itrial) = trials.t_go_aud_on(itrial) + op.beep_dur; 
+        
+            if strcmp(op.visual, 'fixpoint') || strcmp(op.visual, 'orthography')
+                set(annoStr.Plus, 'color','g');
+                drawnow;
+            end
+            if ~ok, fprintf('i am late for this trial TIME_GOSIGNAL_START\n'); end
+        
+            % show green cross ASAP after starting to play GO beep
+            set(annoStr.Plus, 'color','g');
+            trials.t_go_vis_on(itrial) = ManageTime('current', CLOCK); 
+        
+            % set the target start time for the start of the next trial's onset time
+            TIME_STIM_START = trials.t_go_aud_on(itrial) + op.gobeep_to_next_trial; 
+        
+            % save timing info for this trial into the tsv 
+            writetable(trials, paths.trial_info_file , 'Delimiter', '\t', 'FileType', 'text')
+        
+        
+            if op.require_keypress_every_trial
+                if itrial ~= op.ntrials
+                    fprintf('\n Press any key to proceed to next trial \n')
+                end
+                
+                pause()
+            end
+        
+        end
+    case 'hand-oc'
+        set(annoStr.Plus,'Color',[0 1 0]) % turn cross green to have subject start doing hand-open-close
+        fprintf('\n Press any key to end this task \n')
         pause()
-    end
 
+    case {'base-controlled','base-free','reading','reading-hand-oc'}
+        pause(0.1)
+        fprintf('\n\n')
+        proceed = ''; 
+        while isempty(proceed) || ~(proceed=='y')
+            proceed = input('Enter ''y'' to end this task and proceed to sync pulses    ','s');
+        end
+    
+    otherwise
+        error(['unknown task ''',op.task,])
 end
 
 
@@ -409,20 +468,24 @@ end
 % experiment time
 op.elapsed_time = toc(runtimer)/60;    % elapsed time of the experiment
 save(paths.run_exp_op_file, 'op'); % save ops structure, including paths
-fprintf('\nElapsed Time: %f (min)\n', op.elapsed_time)
+fprintf(['\nTask ''',op.task, ''' in session ''', op.ses, ''' complete.... elapsed time = ' sprintf('%f (min)\n', op.elapsed_time)]); 
 
-fprintf('Press any key to send final sync pulses and end this experimental phase')
-pause()
-beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
-save(paths.beacon_times_fname,'beacon_times');
+if op.is_dbs_run
+    fprintf('Press any key to send final sync pulses and end this experimental phase')
+    pause()
+    beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
+    save(paths.beacon_times_fname,'beacon_times');
+end
 
 % pause to make sure audio stim have finished playing, then close audio writer objects
 pause(1)
 release(headwrite);
 release(beepread);
 
-cancel(aud_record_obj_1)
-cancel(aud_record_obj_2)
+if op.record_audio
+    cancel(aud_record_obj_1)
+    cancel(aud_record_obj_2)
+end
 
 close all
 

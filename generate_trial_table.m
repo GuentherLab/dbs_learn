@@ -69,10 +69,6 @@ stim_reps_by_task = {...
 
 stim_reps_by_task = cell2table(stim_reps_by_task, 'VariableNames',{'ses','task','stim_group','reps_per_unq_stim'});
 
-op.ses = regexp(op.sestask,'^[^_]*','match'); op.ses = op.ses{1}; 
-op.task = regexp(op.sestask,'(?<=_).*', 'match'); op.task = op.task{1}; 
-op = rmfield(op,'sestask'); 
-
 op.stim_master_file = [paths.code_dbs_learn, filesep, 'stim_master_', op.ses, '.tsv']; 
 stim_master = readtable(op.stim_master_file,'FileType','text'); 
 
