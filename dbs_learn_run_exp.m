@@ -46,38 +46,16 @@ field_default('op','is_dbs_run',1); % if yes, will try to send beacon pulses for
 field_default('op','visual', 'orthography'), 
 field_default('op','deviceHead','')      
 field_default('op','beepoffset',0.1)   
-field_default('op','subj_n_syls',7)   
+
 
 % starting clock
 CLOCKp = ManageTime('start');
 TIME_PREPARE = 0.5; % Waiting period before experiment begin (sec)
 runtimer = tic; % timer for elapsed time in this run
 
-
 paths.data_sub = [paths.data, filesep, op.sub]; 
 paths.data_ses_beh = [paths.data_sub, filesep, op.ses, filesep, 'beh']; % behavioral data folder for the session (most outputs of this script)
 paths.data_ses_audvid = [paths.data_sub, filesep, op.ses, filesep, 'audio-video']; 
-
-% set session-specific timing params
-%%% op.gobeep_to_next_trial is the speech window - time between GO cue onset and when the next trial's stim is presented
-switch op.ses
-    case 'subsyl'
-        op.vis_stim_dur = 1.5; % 1.5s is similar to vis stim from intrasurgical experiment in richardson lab
-        op.gobeep_to_next_trial = 4; 
-        field_default('op','ortho_font_size',150); % 
-    case 'multisyl'  
-        op.vis_stim_dur = 3; % maximum audio stim length (at 7 syllables) is 2.8sec
-        op.gobeep_to_next_trial = 6; 
-        field_default('op','ortho_font_size',75); % 80 font size is max that will fit on 1920x1080 screen for 7syl
-end
-
-% if forward digit span task, always require keypress on every trial 
-%%%%%  (so we can score it online and end when an error occurs)
-% do not show orthography during FDS (this task usually is audio-only) 
-if op.task=="fds"
-    op.require_keypress_every_trial = 1;
-    op.visual = 'fixpoint'; 
-end
 
 %%%% parameters for sync pulses sent to CED computer [set by Zeyang]
 op.pulse.interval = 0.4; 
@@ -105,7 +83,42 @@ filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.r
 % specifying paths for this run
 paths.run_exp_op_file = [paths.data_ses_beh, filesep, filestr,'run-exp-op.mat'];
 
+% set session-specific timing, stim, and path params
+switch op.task
 
+    % trialed speech tasks
+    case {'famil','assess','pretest','trainA','trainB','test1','test2','fds'}   
+
+        %%% op.gobeep_to_next_trial is the speech window - time between GO cue onset and when the next trial's stim is presented
+        paths.audio_stim_ses = [paths.code_dbs_learn, filesep, 'stimuli', filesep, 'audio-',op.ses]; 
+        switch op.ses
+            case 'subsyl'
+                op.vis_stim_dur = 1.5; % 1.5s is similar to vis stim from intrasurgical experiment in richardson lab
+                field_default('op','ortho_font_size',150); % 
+                field_default('op','syl_struct','ccvcc'); % default is to run ccvcc; only use 'ccvc' if subject is severely struggling with the task
+                paths.audio_stim_task = [paths.audio_stim_ses,'-',op.syl_struct, filesep, op.task]; % contains the main audio stim files for this task
+                switch op.syl_struct
+                    case 'ccvcc'
+                        op.gobeep_to_next_trial = 4.2;
+                    case 'ccvc'
+                        op.gobeep_to_next_trial = 4; % stim is 100ms shorter than ccvcc; give 200ms less response time
+                end
+            case 'multisyl'  
+                op.vis_stim_dur = 3; % maximum audio stim length (at 7 syllables) is 2.8sec
+                op.gobeep_to_next_trial = 6; 
+                field_default('op','ortho_font_size',75); % 80 font size is max that will fit on 1920x1080 screen for 7syl
+                paths.audio_stim_task = [paths.audio_stim_ses, filesep, op.task]; % contains the main audio stim files for this task
+                field_default('op','subj_n_syls',7);   
+        end
+
+        % if forward digit span task, always require keypress on every trial 
+        %%%%%  (so we can score it online and end when an error occurs)
+        % do not show orthography during FDS (this task usually is audio-only) 
+        if op.task=="fds"
+            op.require_keypress_every_trial = 1;
+            op.visual = 'fixpoint'; 
+        end
+end
 
 
 % visual setup
@@ -140,8 +153,6 @@ if op.record_audio
 end
 
 sileread = dsp.AudioFileReader(fullfile(paths.stim, 'silent.wav'), 'SamplesPerFrame', 2048);
-
-
 
 % set up sound output players
 audiodevreset;
@@ -217,7 +228,7 @@ op % show options on command line
 save(paths.run_exp_op_file, 'op'); % save ops structure, including paths  
     
 
-%% show instructions onscreen to subject if it's the first trial
+%% show instructions onscreen to subject
 fprintf(['\n Displaying instructions onscreen: \n''''', strrep(op.instructions,';','\n'),'''''',...
     '\n\nPress any key to proceed to task'])
 set(annoStr.Stim, 'String', split(op.instructions,';'))
@@ -234,16 +245,13 @@ CLOCK = ManageTime('start');                        % resets clock to t=0 (first
 TIME_STIM_START = 0;
 
 
-%% RUN TASKS
-
-
+%%%%%%%%%%%%%%%%%% RUN TASKS %%%%%%%%%%%%%%%%%%%%
 switch op.task
-    case {'famil','assess','pretest','trainA','trainB','test1','test2','fds'}   % trialed speech tasks
 
+    %% trialed speech tasks
+    case {'famil','assess','pretest','trainA','trainB','test1','test2','fds'}   
 
         [trials, op] = generate_trial_table(op); 
-        paths.audio_stim_ses = [paths.code_dbs_learn, filesep, 'stimuli', filesep, 'audio-',op.ses]; 
-        paths.audio_stim_task = [paths.audio_stim_ses, filesep, op.task]; % contains the main audio stim files for this task
         paths.trial_info_file = [paths.data_ses_beh, filesep, filestr,'trials.tsv'];
         writetable(trials, paths.trial_info_file , 'Delimiter', '\t', 'FileType', 'text')
         
@@ -263,9 +271,6 @@ switch op.task
 
         %% Main trial loop
         for itrial = starting_trial:op.ntrials
-        
-        
-        
             if (mod(itrial,op.ntrials_between_breaks) == 0) && (itrial ~= op.ntrials)  % Break after every X trials, but not on the last
                 fprintf(['Scheduled break at every ', num2str(op.ntrials_between_breaks), ' trial\n'])
         
@@ -441,6 +446,8 @@ switch op.task
             end
         
         end
+
+        %% NON-TRIALED TASKS 
     case 'hand-oc'
         set(annoStr.Plus,'Color',[0 1 0]) % turn cross green to have subject start doing hand-open-close
         fprintf('\n Press any key to end this task \n')
