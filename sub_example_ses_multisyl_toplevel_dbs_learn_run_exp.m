@@ -1,5 +1,6 @@
+%%%%%% top-level file for calling main task script for a session
 
-
+clear
 op.sub = 'qqq';
 op.dx = ''; 
 op.ses = 'multisyl'; 
@@ -48,12 +49,6 @@ op.step_id = 'B301';
 dbs_learn_run_exp(op)
 
 %====================================== washout starts
-
-%% free base
-op.task='base-free'; 
-op.dbs_state = 'off';
-op.step_id = 'C001';
-dbs_learn_run_exp(op)
 
 %% ctr base
 op.task='base-controlled'; 
@@ -109,8 +104,3 @@ op.step_id = 'E301';
 dbs_learn_run_exp(op)
 
 
-%% TELL
-op.task='reading'; 
-op.dbs_state = 'off';
-op.step_id = 'K501';
-dbs_learn_run_exp(op)

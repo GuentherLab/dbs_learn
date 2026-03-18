@@ -12,7 +12,7 @@
 %
 % options for op.task:
 %   trialed speech tasks: 'famil','assess','pretest','trainA','trainB','test1','test2','fds'
-%   untrialed tasks: 'base-controlled','base-free','reading','hand-oc','reading-hand-oc'
+%   untrialed tasks: 'base-controlled','reading','hand-oc','reading-hand-oc'
 
 function dbs_learn_run_exp(op)
 
@@ -465,7 +465,7 @@ switch op.task
         fprintf('\n Press any key to end this task \n')
         pause()
 
-    case {'base-controlled','base-free','reading','reading-hand-oc'}
+    case {'base-controlled','reading','reading-hand-oc'}
         pause(0.1)
         fprintf('\n\n')
         proceed = ''; 
