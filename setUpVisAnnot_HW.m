@@ -41,7 +41,7 @@ cuAnoD = [250 150];
 cuAnoPos = getPos(cuAnoD, winPos);
 
 % Preparing 'Stim' Annotation Position
-stimAnoD = [700 300]; % if stim too small/large, need to adjust
+stimAnoD = [figPosition(3) figPosition(4)]; % if stim too small/large, need to adjust
 stimAnoPos = getPos(stimAnoD, winPos);
 
 %% Actually create the stim presentation figure

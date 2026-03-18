@@ -46,6 +46,8 @@ field_default('op','is_dbs_run',1); % if yes, will try to send beacon pulses for
 field_default('op','visual', 'orthography'), 
 field_default('op','deviceHead','')      
 field_default('op','beepoffset',0.1)   
+field_default('op','dbs_state','unknown')
+field_default('op','step_id','unknown')
 
 
 % starting clock
@@ -78,7 +80,8 @@ else
     op.run = 1;
 end
 
-filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.run), '_']; % this string gets used in a variety of files associated with this run
+% this string gets used in a variety of files associated with this run
+filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.run), '_' 'step-',op.step_id '_']; 
 
 % specifying paths for this run
 paths.run_exp_op_file = [paths.data_ses_beh, filesep, filestr,'run-exp-op.mat'];
@@ -482,6 +485,7 @@ end
 %% end of experiment
 
 % experiment time
+pause(3) %%%% make sure the patient doesn't start doing anything until we get a good baseline for the final trial
 op.elapsed_time = toc(runtimer)/60;    % elapsed time of the experiment
 save(paths.run_exp_op_file, 'op'); % save ops structure, including paths
 fprintf(['\nTask ''',op.task, ''' in session ''', op.ses, ''' complete.... elapsed time = ' sprintf('%f (min)\n', op.elapsed_time)]); 
