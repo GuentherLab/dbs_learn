@@ -118,6 +118,15 @@ switch op.task
             op.require_keypress_every_trial = 1;
             op.visual = 'fixpoint'; 
         end
+
+        % in familiarization, pause between trials so we can give feedback and ask about sound levels
+        if op.task=="famil"
+            op.require_keypress_every_trial = 1;
+        end
+
+    case {'base-controlled','base-free','reading','hand-oc','reading-hand-oc'}
+        field_default('op','ortho_font_size',75);
+
 end
 
 
@@ -458,7 +467,7 @@ switch op.task
         fprintf('\n\n')
         proceed = ''; 
         while isempty(proceed) || ~(proceed=='y')
-            proceed = input('Enter ''y'' to end this task and proceed to sync pulses    ','s');
+            proceed = input('Enter ''y'' to end this task and proceed to sync pulses [if applicable]    ','s');
         end
     
     otherwise
@@ -478,7 +487,7 @@ save(paths.run_exp_op_file, 'op'); % save ops structure, including paths
 fprintf(['\nTask ''',op.task, ''' in session ''', op.ses, ''' complete.... elapsed time = ' sprintf('%f (min)\n', op.elapsed_time)]); 
 
 if op.is_dbs_run
-    fprintf('Press any key to send final sync pulses and end this experimental phase')
+    fprintf('Press any key to send final sync pulses [if applicable] and end this experimental phase')
     pause()
     beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
     save(paths.beacon_times_fname,'beacon_times');

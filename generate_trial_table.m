@@ -99,6 +99,15 @@ stim_reps_by_task = cell2table(stim_reps_by_task, 'VariableNames',{'ses','task',
 op.stim_master_file = [paths.code_dbs_learn, filesep, 'stim_master_', op.ses, '.tsv']; 
 stim_master = readtable(op.stim_master_file,'FileType','text'); 
 
+stim_reps_tab = stim_reps_by_task(stim_reps_by_task.ses == string(op.ses)  & ...
+                                  stim_reps_by_task.task == string(op.task), :); 
+
+% for subsyl, look only for the stim w/ the syllable structure we've specified in op
+if op.ses == "subsyl"
+     stim_master = stim_master(stim_master.syl_struct == string(op.syl_struct), :);
+     stim_reps_tab = stim_reps_tab(stim_reps_tab.syl_struct == string(op.syl_struct), :); 
+end
+
 if op.task == "famil" || op.task == "assess" || op.task=="fds" % if familiarization or assessment phase, just take the exact listed stim in order
     trials = stim_master(stim_master.stim_group == string(op.task), : );
 else % for training/testing, stim list needs to be sorted / multiplied / shuffled 
@@ -107,15 +116,6 @@ else % for training/testing, stim list needs to be sorted / multiplied / shuffle
     % for multisyl, keep only stim with this subject's selected syllable count (does not apply to famil/assess)
     if op.ses == "multisyl"
         stim_master = stim_master(stim_master.n_syllables == op.subj_n_syls, :); 
-    end
-
-    stim_reps_tab = stim_reps_by_task(stim_reps_by_task.ses == string(op.ses)  & ...
-                                      stim_reps_by_task.task == string(op.task), :); 
-
-    % for subsyl, look only for the stim w/ the syllable structure we've specified in op
-    if op.ses == "subsyl"
-         stim_master = stim_master(stim_master.syl_struct == string(op.syl_struct), :);
-         stim_reps_tab = stim_reps_tab(stim_reps_tab.syl_struct == string(op.syl_struct), :); 
     end
 
     n_stim_groups = height(stim_reps_tab);
