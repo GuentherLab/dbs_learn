@@ -6,15 +6,17 @@ function beacon_times = test_Beacon(varargin)
     if nargin>=1, Interval = varargin{1}; end % interval = dur + delay
     if nargin>=2, Dur = varargin{2}; end
     if nargin>=3, Rep = varargin{3}; end
-    if nargin>=4, verbose = varargin{4}; else; verbose = 1; end
+    if nargin>=4, dio = varargin{4}; else; dio = []; end % % ZY added 2025-03-18
+    if nargin>=5, verbose = varargin{5}; else; verbose = 1; end
     assert(Dur<Interval,'"Dur" must be less than "Interval"')
     %%
-    global dio % this is not idea but let's keep it this way
-    
+    % global dio % this is not idea but let's keep it this way; ZY commented this out 2025-03-18
     % establish dio session
     if isempty(dio) || ~isvalid(dio)
         dio = digitalio('nidaq','Dev1');
         addline(dio, 0:7, 'out');
+        data = [0 0 0 0 0 0 0 0];
+            putvalue(dio,data);
     end
     beacon_times = [];
     t = timer('StartFcn',@(~,~)fprintf('timer started, %1.0f beacons in 0.5 sec.\n',Rep),...
@@ -55,6 +57,6 @@ function beacon_times = test_Beacon(varargin)
     %   2) screenClicker @ a.0.0 (idx 1)
     %   3) beacon @ a.0.1 (idx 2)
     
-    clear global dio
+    %clear global dio
 
 end
