@@ -111,6 +111,14 @@ end
 if op.task == "famil" || op.task == "assess" || op.task=="fds" % if familiarization or assessment phase, just take the exact listed stim in order
     trials = stim_master(stim_master.stim_group == string(op.task), : );
 else % for training/testing, stim list needs to be sorted / multiplied / shuffled 
+
+    switch op.task
+        case 'pretest'
+            field_default('op','max_repeated_trials', 1);
+        otherwise 
+            field_default('op','max_repeated_trials', 3); 
+    end
+    
     trials = table; 
 
     % for multisyl, keep only stim with this subject's selected syllable count (does not apply to famil/assess)

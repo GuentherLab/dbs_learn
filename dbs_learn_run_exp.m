@@ -39,7 +39,6 @@ reset_daq()
 field_default('op','sub','qqq'); 
 field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
 field_default('op','task', 'famil'), 
-field_default('op','max_repeated_trials', 3); 
 field_default('op','record_audio', 1); 
 field_default('op','require_keypress_every_trial',0); % if true, experimenter must press any key at end of trial to proceed to next trial
 field_default('op','vis_offset_to_go',[0.25, 0.75]); % min and max of delay (jittered) between visual offset and GO cue presentation
@@ -202,9 +201,9 @@ if op.is_dbs_run
     %%%%% give option for experimenter to send more pulses to calibrate
     repeat_beacon = 1;
     beacon_times = []; 
-    % >>> ZY mod: moved outside of while-loop, so all events saved correctly
-    
-    %<<<
+
+    fprintf([ 'Press any key to send pulses.... \n'])
+
     while repeat_beacon
         beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
         save(paths.beacon_times_fname, 'beacon_times');
