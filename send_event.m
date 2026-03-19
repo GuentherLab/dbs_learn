@@ -35,6 +35,8 @@ function [event_times,code_sent,dio] = send_event(eventCode,dio,Interval,Dur,Rep
         %global dio % this is not idea but let's keep it this way
         dio = digitalio('nidaq',devID);
         addline(dio, 0:7, 'out');
+        data = [0 0 0 0 0 0 0 0];
+        putvalue(dio,data);
     end
     event_times = [];
     t = timer('StartFcn',@(~,~)fprintf('timer started, %1.0f beacons in 0.5 sec.\n',Rep),...

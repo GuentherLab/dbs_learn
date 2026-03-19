@@ -32,6 +32,9 @@ end
 paths = struct; setpaths_dbs_learn();
 op.task_computer = getenv('COMPUTERNAME'); 
 
+% reset DAQs
+reset_daq()
+
 %% audio device setup
 field_default('op','sub','qqq'); 
 field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
@@ -352,7 +355,7 @@ switch op.task
         
             if FLAG_SEND_EVENT_STIM_ONSET
                 % code 3 => sending on DI port 3 of Dev 2
-                [evt_,evtCode_] = send_event([3],[],0.1,0.04,1,'Dev2'); 
+                [evt_,evtCode_] = send_event([3],[],0.1,0.04,1,'Dev2',0); 
                 evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
                 % ## Ideally, we should move the following to the end of trial ##
                 tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
@@ -507,6 +510,11 @@ if op.record_audio
     cancel(aud_record_obj_2)
 end
 
+
+% reset DAQs
+reset_daq()
+
+%
 close all
 
    
