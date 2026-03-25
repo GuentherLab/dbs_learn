@@ -4,7 +4,7 @@ compname = getenv('COMPUTERNAME');
 
 
 switch compname 
-    case '677-GUE-WL-0012' %%% thinkpad to stay in dbs-learn expeirment room
+    case '677-GUE-WL-0012' %%% thinkpad to stay in dbs-learn experiment room
         paths.code = 'C:\code';
     case '677-GUE-WL-0010' 
         paths.code = 'C:\docs\code'; 

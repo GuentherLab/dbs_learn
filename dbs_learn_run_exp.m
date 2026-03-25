@@ -154,14 +154,15 @@ if op.record_audio
     if ~exist(paths.data_ses_audvid, 'dir')
         mkdir(paths.data_ses_audvid) %%%% recording function fails if the dir doesn't already exist
     end
-    paths.aud_record_filename_1 = [paths.data_ses_audvid, filesep, filestr,'audrec_1.wav'];
-    paths.aud_record_filename_2 = [paths.data_ses_audvid, filesep, filestr,'audrec_2.wav'];
+    paths.aud_record_filename_headphone = [paths.data_ses_audvid, filesep, filestr,'recording-headphone.wav'];
+
 
     aud_record_obj_1 = parfeval(@recordMonoDevice, 0, ...
-       aud.device_in_1, paths.aud_record_filename_1);
+       aud.device_in_1, paths.aud_record_filename_headphone);
     if isfield(aud,'device_in_2')
+        paths.aud_record_filename_mic = [paths.data_ses_audvid, filesep, filestr,'recording-mic.wav'];
         aud_record_obj_2 = parfeval(@recordMonoDevice, 0, ...
-           aud.device_in_2, paths.aud_record_filename_2);
+           aud.device_in_2, paths.aud_record_filename_mic);
     end
 
 end
