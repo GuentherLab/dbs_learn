@@ -57,7 +57,7 @@ CLOCKp = ManageTime('start');
 TIME_PREPARE = 0.5; % Waiting period before experiment begin (sec)
 runtimer = tic; % timer for elapsed time in this run
 
-paths.data_sub = [paths.data, filesep, op.sub]; 
+paths.data_sub = [paths.data_local, filesep, op.sub]; 
 paths.data_ses_beh = [paths.data_sub, filesep, op.ses, filesep, 'beh']; % behavioral data folder for the session (most outputs of this script)
 paths.data_ses_audvid = [paths.data_sub, filesep, op.ses, filesep, 'audio-video']; 
 
