@@ -14,14 +14,17 @@ op.run = 5; %%%% need to use 'run 56' ?
 %% set paths
 setpaths_dbs_learn()
 
-paths.src_sub = [paths.data, filesep, op.sub]; 
-paths.src_ses = [paths.src_sub, filesep, op.ses]; 
+paths.src_sub = [paths.data, filesep,'sourcedata', filesep, op.sub]; 
+paths.src_ses = [paths.src_sub, filesep,'ses-',op.ses]; 
 paths.audvid = [paths.src_ses, filesep, 'audio-video']; 
-paths.beh = [paths.src_ses, filsep, 'beh']; 
+paths.beh = [paths.src_ses, filesep, 'beh']; 
 
 paths.der_sub = [paths.data, filesep, 'derivatives', filesep, op.sub]; 
 paths.trial_audio = [paths.der_sub, filesep, 'trial-audio']; 
 paths.trial_audio_task = [paths.trial_audio, filesep, op.task]; % assume only 1 run per task
+paths.annot = [paths.der_sub, filesep, 'annot']
+paths.landmarks_file = [paths.annot filesep filestr,  '_sync-landmarks.tsv']; 
+
 
 %%%% this string gets used in a variety of files associated with this run
 % filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.run), '_' 'step-',op.step_id '_']; 
@@ -29,6 +32,8 @@ filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.r
 
 
 audiofile_full_run = [paths.audvid, filesep, filestr,'recording-headphone.wav']; 
+audinfo = audioinfo(audiofile_full_run); 
+[fpath, fname, fext] = fileparts(audiofile_full_run); 
 
 %% load audio and timing info
 % make trial audio directories
@@ -36,7 +41,9 @@ system(['mkdir ' paths.trial_audio]);
 system(['mkdir ' paths.trial_audio_task]);
 
 % load trial data
-trials = readtable([paths.beh, filesep, filestr, 'trials.tsv'], 'FileType','text','Delimiter','tab']);
+trials = readtable([paths.beh, filesep, filestr, 'trials.tsv'], 'FileType','text','Delimiter','tab');
+landmarks = readtable([paths.beh, filesep, filestr, 'sync_landmarks.tsv'], 'FileType','text','Delimiter','tab');
+
 
 % add vars to trial table
 ntrials = height(trials);
