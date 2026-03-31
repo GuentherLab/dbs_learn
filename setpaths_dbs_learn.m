@@ -4,13 +4,16 @@ compname = getenv('COMPUTERNAME');
 
 
 switch compname 
-    case '677-GUE-WL-0012' %%% thinkpad to stay in dbs-learn expeirment room
+    case '677-GUE-WL-0012' %%% thinkpad to stay in dbs-learn experiment room
         paths.code = 'C:\code';
-    case '677-GUE-WL-0010' 
+    case {'677-GUE-WL-0010', 'AMSMEIER'} % AM thinkpad, strix 
         paths.code = 'C:\docs\code'; 
 end
 
-paths.data  = 'C:\dbs_learn_data'; 
+paths.data_local  = 'C:\dbs_learn_data'; % local location to save when running experiment
+
+% remote data - upload here after a session and analyze from here
+paths.data = 'C:\Dropbox\R01-SML_data_shared'; 
     paths.groupanalysis = [paths.data, filesep, 'groupanalysis']; 
 
 paths.code_dbs_learn = [paths.code, filesep, 'dbs_learn']; 
@@ -23,8 +26,8 @@ paths.spm = [paths.code, filesep, 'spm12']; %%%% use version of spm in fieldtrip
 paths.fieldtrip_toolbox = [paths.code, filesep, 'fieldtrip']; % only used in analysis, not running experiment
 paths.bml = [paths.code, filesep, 'bml']; % RM Richardson lab toolbox
 
-if ~isfolder(paths.data)
-    mkdir(paths.data)
+if ~isfolder(paths.data_local)
+    mkdir(paths.data_local)
 end
 
  paths_to_add =  {paths.code_dbs_learn;...

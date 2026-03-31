@@ -12,7 +12,7 @@ auddevs = audiodevinfo;
     devs_out = {auddevs.output.Name};
 
     switch computername
-        case '677-GUE-WL-0010'  % AM work laptop - Thinkpad X1
+        case {'677-GUE-WL-0010','677-GUE-WL-0012'}  % AM Thinkpad X1 laptops
             if any(contains(devs_out,'Focusrite'))
                 aud.device_out = 'Speakers (Focusrite USB Audio)'; 
                 aud.device_in_1 = 'Analogue 1 + 2 (Focusrite USB Audio)';
