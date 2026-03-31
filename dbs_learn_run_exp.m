@@ -346,21 +346,7 @@ switch op.task
             audiorow = strcmp(trials.name{itrial}, stim_audio.name); % find the row of the audio file to play
             stimread = stim_audio.stimreads{audiorow};
         
-            %% >>>> ZY addition
-            % I put this before AM defines TIME_TRIAL_START, only so that I don't add additional delay to actual presentation
-            % but we can figure out a better way to integrate
-        
-            % can tblEvt be saved as a .tsv table rather than mat? can it be combined with the beacon times table? 
-        
-            if FLAG_SEND_EVENT_STIM_ONSET
-                % code 3 => sending on DI port 3 of Dev 2
-                [evt_,evtCode_] = send_event([3],[],0.1,0.04,1,'Dev2',0); 
-                evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
-                % ## Ideally, we should move the following to the end of trial ##
-                tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
-                save(paths.trig_events_tab_fname, 'tblEvt');
-            end
-            %% <<<
+            
             
             % pause until target stim start time for this trial
             ok=ManageTime('wait', CLOCK, TIME_STIM_START); 
@@ -377,7 +363,21 @@ switch op.task
             end
             drawnow;
             trials.t_stim_vis_on(itrial) = ManageTime('current', CLOCK);
+            %% >>>> ZY addition
+            % I put this before AM defines TIME_TRIAL_START, only so that I don't add additional delay to actual presentation
+            % but we can figure out a better way to integrate
         
+            % can tblEvt be saved as a .tsv table rather than mat? can it be combined with the beacon times table? 
+        
+            if FLAG_SEND_EVENT_STIM_ONSET
+                % code 3 => sending on DI port 3 of Dev 2
+                [evt_,evtCode_] = send_event([3],[],0.1,0.04,1,'Dev2',0); 
+                evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
+                % ## Ideally, we should move the following to the end of trial ##
+                tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
+                save(paths.trig_events_tab_fname, 'tblEvt');
+            end
+            %% <<<
         
             % play stim sound - ASAP after visual onset
              %%% AM note 2026/2/15: if time is measured before starting the while loop or after the first iteration of the while loop...
