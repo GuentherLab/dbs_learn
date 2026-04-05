@@ -344,8 +344,11 @@ switch op.task
             
             
             % pause until target stim start time for this trial
+            % ZY notes, keeping this redundant for compatibility and easy reversion.
+            % Zy addition, added t_trial_start to mark the programmatic start of trial, this is more relevant for (pre-)processing rather than task-alignment
             ok=ManageTime('wait', CLOCK, TIME_STIM_START); 
-           
+            trials.t_trial_start(itrial) = ManageTime('current', CLOCK);
+            
             % show stim orthography
             if strcmp(op.visual, 'orthography')
                 set(annoStr.Plus, 'Visible','off');
@@ -358,6 +361,7 @@ switch op.task
             end
             drawnow;
             trials.t_stim_vis_on(itrial) = ManageTime('current', CLOCK);
+            %trials.dn_stim_vis_on(itrial) = now(); % for external syncing with beacon times
             %% >>>> ZY addition
             % I put this before AM defines TIME_TRIAL_START, only so that I don't add additional delay to actual presentation
             % but we can figure out a better way to integrate
@@ -367,6 +371,8 @@ switch op.task
             if FLAG_SEND_EVENT_STIM_ONSET
                 % code 3 => sending on DI port 3 of Dev 2
                 [evt_,evtCode_] = send_event([3],[],0.1,0.04,1,'Dev2',0); 
+                trials.t_sync_event_on(itrial) = ManageTime('current', CLOCK);
+                trials.dn_sync_event_on(itrial) = now(); % overwrite this with the more accurate time from send_event
                 evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
                 % ## Ideally, we should move the following to the end of trial ##
                 tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
@@ -438,13 +444,18 @@ switch op.task
             % show green cross ASAP after starting to play GO beep
             set(annoStr.Plus, 'color','g');
             trials.t_go_vis_on(itrial) = ManageTime('current', CLOCK); 
-        
+            
+            % ZY changed this logic so wait is finished in the current trial
+            TIME_DEALY_COMPLETE = trials.t_go_vis_on(itrial) + op.gobeep_to_next_trial; 
+            TIME_STIM_START = TIME_DEALY_COMPLETE;
+            ManageTime('wait', CLOCK, TIME_DEALY_COMPLETE);     % wait for fixed
+            trials.t_trial_complete(itrial) = ManageTime('current', CLOCK);
+            %{ 
             % set the target start time for the start of the next trial's onset time
             TIME_STIM_START = trials.t_go_aud_on(itrial) + op.gobeep_to_next_trial; 
-        
+            %}
             % save timing info for this trial into the tsv 
             writetable(trials, paths.trial_info_file , 'Delimiter', '\t', 'FileType', 'text')
-        
         
             if op.require_keypress_every_trial
                 if itrial ~= op.ntrials
@@ -453,6 +464,7 @@ switch op.task
                 
                 pause()
             end
+            
         
         end
 
