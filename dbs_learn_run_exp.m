@@ -29,13 +29,14 @@ if ~isempty(parpool_obj)
     cancel(parpool_obj.FevalQueue.RunningFutures);   % new-style futures queue (R2022b+)
 end
 
-paths = struct; setpaths_dbs_learn();
+paths.data =  'C:\dbs_learn_data'; % local location to save when running experiment
+paths = setpaths_dbs_learn(paths,op);
 op.task_computer = getenv('COMPUTERNAME'); 
 
 % reset DAQs
 reset_daq()
 
-%% audio device setup
+%% default parameters
 field_default('op','sub','qqq'); 
 field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
 field_default('op','task', 'famil'), 
@@ -57,23 +58,19 @@ CLOCKp = ManageTime('start');
 TIME_PREPARE = 0.5; % Waiting period before experiment begin (sec)
 runtimer = tic; % timer for elapsed time in this run
 
-paths.data_sub = [paths.data_local, filesep, op.sub]; 
-paths.data_ses_beh = [paths.data_sub, filesep, op.ses, filesep, 'beh']; % behavioral data folder for the session (most outputs of this script)
-paths.data_ses_audvid = [paths.data_sub, filesep, op.ses, filesep, 'audio-video']; 
-
 %%%% parameters for sync pulses sent to CED computer [set by Zeyang]
 op.pulse.interval = 0.4; 
 op.pulse.count = 3; 
 op.pulse.duration = 0.05; 
 
-if ~exist(paths.data_ses_beh, 'dir')
-    mkdir(paths.data_ses_beh)
+if ~exist(paths.beh, 'dir')
+    mkdir(paths.beh)
 end
 
 
 % Check existing trial info files to increment run ID for this session
 
-allEventFiles = dir([paths.data_ses_beh, filesep, '*_run-exp-op.mat']);
+allEventFiles = dir([paths.beh, filesep, '*_run-exp-op.mat']);
 if ~isempty(allEventFiles)
     prevRunIds = regexp({allEventFiles.name}, '_run-(\d+)_', 'tokens', 'ignorecase');
     prevRunIds = cellfun(@(x) str2double(x{1,1}), prevRunIds, 'UniformOutput', true);
@@ -82,11 +79,8 @@ else
     op.run = 1;
 end
 
-% this string gets used in a variety of files associated with this run
-filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.run), '_' 'step-',op.step_id '_']; 
-
 % specifying paths for this run
-paths.run_exp_op_file = [paths.data_ses_beh, filesep, filestr,'run-exp-op.mat'];
+paths.run_exp_op_file = [paths.beh, filesep, paths.filestr_step,'run-exp-op.mat'];
 
 % set session-specific timing, stim, and path params
 switch op.task
@@ -151,16 +145,15 @@ op.instructions = instruct_tab.instructions{rowmatch}; clear rowmatch instruct_t
 aud = setup_audio_devices(); 
 
 if op.record_audio
-    if ~exist(paths.data_ses_audvid, 'dir')
-        mkdir(paths.data_ses_audvid) %%%% recording function fails if the dir doesn't already exist
+    if ~exist(paths.src_audvid, 'dir')
+        mkdir(paths.src_audvid) %%%% recording function fails if the dir doesn't already exist
     end
-    paths.aud_record_filename_headphone = [paths.data_ses_audvid, filesep, filestr,'recording-headphone.wav'];
-
+    paths.aud_record_filename_headphone = [paths.src_audvid, filesep, paths.filestr_step,'recording-headphone.wav'];
 
     aud_record_obj_1 = parfeval(@recordMonoDevice, 0, ...
        aud.device_in_1, paths.aud_record_filename_headphone);
     if isfield(aud,'device_in_2')
-        paths.aud_record_filename_mic = [paths.data_ses_audvid, filesep, filestr,'recording-mic.wav'];
+        paths.aud_record_filename_mic = [paths.src_audvid, filesep, paths.filestr_step,'recording-mic.wav'];
         aud_record_obj_2 = parfeval(@recordMonoDevice, 0, ...
            aud.device_in_2, paths.aud_record_filename_mic);
     end
@@ -193,7 +186,8 @@ CLOCK=[];                               % Main clock (not yet started)
 %% BEACON SYNC SETUP......  
 
 %% AM note:  this .mat file is redunant with the .tsv - can we delete it? 
-paths.beacon_times_fname = [paths.data_ses_beh, filesep, filestr,'beacon-times.mat'];
+%       zeyang doesn't want to delete one of them yet but is open to it in the future
+paths.beacon_times_fname = [paths.beh, filesep, paths.filestr_step,'beacon-times.mat'];
 
 
 
@@ -232,7 +226,7 @@ figTC=taskControlGUI_release(taskState,op.pulse,paths.beacon_times_fname,beacon_
 % # Initialize EvtTime
 if FLAG_SEND_EVENT_STIM_ONSET
     evt = []; evtCode = [];
-    paths.trig_events_tab_fname = [paths.data_ses_beh, filesep, filestr,'trig-events.mat']
+    paths.trig_events_tab_fname = [paths.beh, filesep, paths.filestr_step,'trig-events.mat']
 end
 %<<<
 
@@ -267,7 +261,7 @@ switch op.task
     case {'famil','assess','pretest','trainA','trainB','test1','test2','fds'}   
 
         [trials, op] = generate_trial_table(op); 
-        paths.trial_info_file = [paths.data_ses_beh, filesep, filestr,'trials.tsv'];
+        paths.trial_info_file = [paths.beh, filesep, paths.filestr_step,'trials.tsv'];
         writetable(trials, paths.trial_info_file , 'Delimiter', '\t', 'FileType', 'text')
         
          % load the stim audio in this table and play them, rather than loading them on every trial
@@ -296,7 +290,7 @@ switch op.task
                     pause() %  pause for keyboard intput so we don't send send pauses during the end of the preceding trial
                     repeat_beacon = 1;
                     %beacon_times = []; 
-                    %paths.beacon_times_fname = [paths.data_ses_beh, filesep, filestr,'beacon-times.mat'];
+                    %paths.beacon_times_fname = [paths.beh, filesep, paths.filestr_step,'beacon-times.mat'];
                     while repeat_beacon
                         beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
                         save(paths.beacon_times_fname, 'beacon_times');

@@ -37,27 +37,9 @@ trials_to_modify_inds = [];
     trials_to_modify_sec = []; 
 
 %% set paths
-setpaths_dbs_learn()
+paths = setpaths_dbs_learn(); 
 
-%%%% this string gets used in a variety of files associated with this run
-% filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.run), '_' 'step-',op.step_id '_']; 
-filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.run), '_']; 
-
-paths.src_sub = [paths.data, filesep,'sourcedata', filesep, op.sub]; 
-paths.src_ses = [paths.src_sub, filesep,'ses-',op.ses]; 
-paths.audvid = [paths.src_ses, filesep, 'audio-video']; 
-paths.beh = [paths.src_ses, filesep, 'beh']; 
-
-paths.der_sub = [paths.data, filesep, 'derivatives', filesep, op.sub]; 
-paths.trial_audio = [paths.der_sub, filesep, 'trial-audio']; 
-paths.trial_audio_task = [paths.trial_audio, filesep, op.task]; % assume only 1 run per task
-paths.annot = [paths.der_sub, filesep, 'annot']
-paths.landmarks_file = [paths.annot filesep filestr,  'sync-landmarks.tsv']; 
-
-
-
-
-audiofile_full_run = [paths.audvid, filesep, filestr,'recording-', op.channel_to_cut, '.wav']; 
+audiofile_full_run = [paths.audvid, filesep, paths.filestr,'recording-', op.channel_to_cut, '.wav']; 
 audinfo = audioinfo(audiofile_full_run); 
 [audfull_path, audfull_name, audfull_ext] = fileparts(audiofile_full_run); 
 
@@ -67,7 +49,7 @@ system(['mkdir ' paths.trial_audio]);
 system(['mkdir ' paths.trial_audio_task]);
 
 % load trial data
-trials = readtable([paths.beh, filesep, filestr, 'trials.tsv'], 'FileType','text','Delimiter','tab');
+trials = readtable([paths.beh, filesep, paths.filestr, 'trials.tsv'], 'FileType','text','Delimiter','tab');
 landmarks = readtable(paths.landmarks_file, 'FileType','text','Delimiter','tab');
 
 

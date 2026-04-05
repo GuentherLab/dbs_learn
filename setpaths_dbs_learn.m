@@ -1,7 +1,13 @@
 %%% set matlab paths for DBS-Multisyllabic experiment 
 
-compname = getenv('COMPUTERNAME');
+function [paths, compname] = setpaths_dbs_learn(op)
 
+% if a paths variable wasn't provided, create a new one
+if ~exist('paths','var')
+    paths = struct; 
+end
+
+compname = getenv('COMPUTERNAME');
 
 switch compname 
     case '677-GUE-WL-0012' %%% thinkpad to stay in dbs-learn experiment room
@@ -11,10 +17,14 @@ switch compname
 end
 
 paths.data_local  = 'C:\dbs_learn_data'; % local location to save when running experiment
+paths.data_remote = 'C:\Dropbox\R01-SML_data_shared'; % remote data - upload here after a session and analyze from here
+    paths.groupanalysis = [paths.data_remote, filesep, 'groupanalysis']; 
 
-% remote data - upload here after a session and analyze from here
-paths.data = 'C:\Dropbox\R01-SML_data_shared'; 
-    paths.groupanalysis = [paths.data, filesep, 'groupanalysis']; 
+
+if ~isfield(paths,'data')
+    paths.data = paths.data_local;
+end
+    
 
 paths.code_dbs_learn = [paths.code, filesep, 'dbs_learn']; 
 paths.code_analysis = [paths.code_dbs_learn, filesep, 'analysis'];
@@ -25,10 +35,6 @@ paths.stim = [paths.code_dbs_learn, filesep, 'stimuli'];
 paths.spm = [paths.code, filesep, 'spm12']; %%%% use version of spm in fieldtrip
 paths.fieldtrip_toolbox = [paths.code, filesep, 'fieldtrip']; % only used in analysis, not running experiment
 paths.bml = [paths.code, filesep, 'bml']; % RM Richardson lab toolbox
-
-if ~isfolder(paths.data_local)
-    mkdir(paths.data_local)
-end
 
  paths_to_add =  {paths.code_dbs_learn;...
      [paths.code_analysis];...
@@ -50,4 +56,40 @@ addpath(genpath([paths.code_dbs_learn, filesep, 'NIMH_daqtoolbox_(Apr-7-2016)'])
 
 set(0,'defaulttextInterpreter','none') 
 
- clear paths_to_add compname
+%% if more details are provided, output relevant paths
+
+if exist('op','var')
+    if isfield(op,'sub') % if sub specified
+        paths.src_sub = [paths.data, filesep,'sourcedata', filesep, op.sub]; 
+        paths.der_sub = [paths.data, filesep, 'derivatives', filesep, op.sub]; 
+        paths.annot = [paths.der_sub, filesep, 'annot']
+        if isfield(op,'ses') % if session specified
+            paths.src_ses = [paths.src_sub, filesep,'ses-',op.ses]; 
+            paths.beh = [paths.src_ses, filesep, 'beh'];
+            paths.src_audvid = [paths.src_ses, filesep, 'audio-video'];
+            paths.landmarks_file = [paths.annot filesep paths.filestr,  'sync-landmarks.tsv']; 
+            paths.trial_audio = [paths.der_sub, filesep, 'trial-audio']; 
+            if isfield(op,'task')
+                paths.trial_audio_task = [paths.trial_audio, filesep, op.task];
+                if isfield(op,'run')
+
+                    %%%% the following string gets used in a variety of files associated with this run
+                    % filestr_step includes step number - use only for sourcedata - useful for Zeyang preprocessing
+                    % filestr omits step number for all further processing as it's redundant with session+task
+                    paths.filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.run), '_']; 
+                    if isfield(op,'step')
+                        paths.filestr_step = [paths.filestr 'step-',op.step_id '_']; 
+                    elseif ~isfield(op,'step')
+                        paths = rmfield(paths,'filestr_step'); % remove unless it's clearly been added to op
+                    end
+                    
+
+                end
+            end
+
+               
+            
+        end
+    end
+end
+
