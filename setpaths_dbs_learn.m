@@ -22,7 +22,7 @@ paths.data_remote = 'C:\Dropbox\R01-SML_data_shared'; % remote data - upload her
 
 
 if ~isfield(paths,'data')
-    paths.data = paths.data_local;
+    paths.data = paths.data_remote;
 end
     
 
@@ -62,13 +62,14 @@ if exist('op','var')
     if isfield(op,'sub') % if sub specified
         paths.src_sub = [paths.data, filesep,'sourcedata', filesep, op.sub]; 
         paths.der_sub = [paths.data, filesep, 'derivatives', filesep, op.sub]; 
-        paths.annot = [paths.der_sub, filesep, 'annot']
+        paths.annot = [paths.der_sub, filesep, 'annot']; 
         if isfield(op,'ses') % if session specified
             paths.src_ses = [paths.src_sub, filesep,'ses-',op.ses]; 
             paths.beh = [paths.src_ses, filesep, 'beh'];
             paths.src_audvid = [paths.src_ses, filesep, 'audio-video'];
-            paths.landmarks_file = [paths.annot filesep paths.filestr,  'sync-landmarks.tsv']; 
+            paths.landmarks_file = [paths.annot filesep, 'sub-',op.sub, '_ses-',op.ses,  '_sync-landmarks.tsv']; 
             paths.trial_audio = [paths.der_sub, filesep, 'trial-audio']; 
+            paths.src_runs_table = [paths.src_ses, filesep, 'sub-',op.sub,'_ses-',op.ses, '_runs.tsv']; 
             if isfield(op,'task')
                 paths.trial_audio_task = [paths.trial_audio, filesep, op.task];
                 if isfield(op,'run')
