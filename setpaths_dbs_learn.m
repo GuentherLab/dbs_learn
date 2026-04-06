@@ -14,6 +14,8 @@ switch compname
         paths.code = 'C:\code';
     case {'677-GUE-WL-0010', 'AMSMEIER'} % AM thinkpad, strix 
         paths.code = 'C:\docs\code'; 
+    case 'ORDI'
+        paths.code = 'C:\Users\lwolf\github_repos'; 
 end
 
 paths.data_local  = 'C:\dbs_learn_data'; % local location to save when running experiment
