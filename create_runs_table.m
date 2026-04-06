@@ -16,7 +16,7 @@
 
 function create_runs_table (op)
 
-op.sub = 'sml002';
+field_default(op,'sub','qqq')
 
 % either run on the specified session or (default) on both sessions
 if isfield(op,'ses')
@@ -37,7 +37,7 @@ for thisses = seslist
             case 'subsyl'
                 tasks = {'famil';'pretest';'trainA';'trainB';'test1';'test2'}; 
             case 'multisyl'
-                tasks = {'fds';'famil';'assess';'pretest';'trainA';'trainB';'test2'}; 
+                tasks = {'fds';'famil';'assess';'pretest';'trainA';'trainB';'test1';'test2'}; 
         end
     
         ntasks = length(tasks); 

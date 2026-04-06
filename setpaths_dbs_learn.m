@@ -71,7 +71,6 @@ if exist('op','var')
             paths.trial_audio = [paths.der_sub, filesep, 'trial-audio']; 
             paths.src_runs_table = [paths.src_ses, filesep, 'sub-',op.sub,'_ses-',op.ses, '_runs.tsv']; 
             if isfield(op,'task')
-                paths.trial_audio_task = [paths.trial_audio, filesep, op.task];
                 if isfield(op,'run')
 
                     %%%% the following string gets used in a variety of files associated with this run
@@ -79,7 +78,7 @@ if exist('op','var')
                     % filestr omits step number for all further processing as it's redundant with session+task
                     paths.filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.run), '_']; 
                     if isfield(op,'step')
-                        paths.filestr_step = [paths.filestr 'step-',op.step_id '_']; 
+                        paths.filestr_step = [paths.filestr 'step-',op.step '_']; 
                     elseif ~isfield(op,'step')
                         paths = rmfield(paths,'filestr_step'); % remove unless it's clearly been added to op
                     end
