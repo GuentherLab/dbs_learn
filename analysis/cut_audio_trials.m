@@ -14,7 +14,10 @@ field_default('op','ses','subsyl');
 field_default('op','channels_to_cut',{'mic','headphone'});
 
 field_default('op','trial_event_start','t_go_aud_on'); % field name in trial table
+
 field_default('op','trial_event_end','t_stim_aud_off'); % field name in trial table (of the next trial)
+% field_default('op','trial_event_end','t_stim_aud_on'); % field name in trial table (of the next trial)
+
 field_default('op','last_trial_duration',6); % seconds
 
 field_default('op','start_offset',25); % optional - set the bounds for session audio outside of trials' boundaries
@@ -56,8 +59,11 @@ for i_syncrow = 1:n_syncrows
     op.run = sync.run(i_syncrow);
     op.step = sync.step{i_syncrow}; 
     if ~any(string(op.task) == tasks) 
-        fprintf(['   skipping task ''', thistask, ''' because it is not a trial-based task \n'])
+        fprintf(['   skipping task ''', op.task, ''' because it is not a trial-based task \n'])
         continue
+    end
+    if string(sync.filetype{i_syncrow}) ~= 'audio.wav'
+        continue % only cut audio trials for audio file rows 
     end
     paths = setpaths_dbs_learn(op); % add run-specific paths
 
@@ -73,6 +79,8 @@ for i_syncrow = 1:n_syncrows
     if isnan(sync.t1(lnd_audiorow)) || isnan(sync.t2(lnd_audiorow))
         fprintf(['missing landmark time(s) for ', sync.filename{lnd_audiorow}, '.... skipping run \n'])
         continue 
+    else
+        fprintf(['Cutting audio trials for task ''', op.task, ''' ..... \n'])
     end
 
     audio_time_minus_trialtab_time = sync.t1(lnd_audiorow) - sync.t1(lnd_trialsrow);  
@@ -83,6 +91,7 @@ for i_syncrow = 1:n_syncrows
     cellcol = cell(ntrials,1);
     nancol = NaN(ntrials,1);
 
+
     % make table listing trialwise audio files
     audiofiles = [trials(:,trialvars_to_copy),...
                    table(cellcol,cellcol,nancol,nancol,nancol, 'VariableNames',...
@@ -91,6 +100,12 @@ for i_syncrow = 1:n_syncrows
     audiofiles.ends(1:end-1) = trials{2:end,op.trial_event_end} + audio_time_minus_trialtab_time;
     audiofiles.ends(end) = audiofiles.starts(end) + op.last_trial_duration; 
     audiofiles.duration = audiofiles.ends - audiofiles.starts; 
+
+    % apply pre-specified manual edits to trialtimes - load manual boundary adjustments table
+    trials_bound_adj = readtable(paths.trialfile_boundary_adjustments, 'FileType','text','Delimiter','tab'); 
+    audiofiles.starts = audiofiles.starts + trials_bound_adj.adjust_start; 
+    audiofiles.ends = audiofiles.ends + trials_bound_adj.adjust_end; 
+    audiofiles = [audiofiles, trials_bound_adj(:,{'adjust_start','adjust_end'})]; % record the adjustment
  
     for ichan = 1:length(op.channels_to_cut)
         
@@ -98,7 +113,7 @@ for i_syncrow = 1:n_syncrows
         
         % make trial audio directories
         cutchan = op.channels_to_cut{ichan}; 
-        paths.trial_audio_task_chan = [paths.trial_audio, filesep, op.task,'_',cutchan]; % trial audio clips for this run and this recording chan
+        paths.trial_audio_task_chan = [paths.trial_audio, filesep, 'ses-',op.ses, '_task-',op.task,'_',cutchan]; % trial audio clips for this run and this recording chan
         if ~exist(paths.trial_audio, 'dir'); system(['mkdir ' paths.trial_audio]); end
         if ~exist(paths.trial_audio_task_chan, 'dir'); system(['mkdir ' paths.trial_audio_task_chan]); end
         
@@ -116,14 +131,7 @@ for i_syncrow = 1:n_syncrows
         for itrial = 1:ntrials
             audiofiles_this_channel.filename{itrial} = ['trial', num2str(itrial), '_', cutchan '_', trials.name{itrial}, '.wav'];
         
-            % apply manual edits to trialtimes
-            if ~isempty(op.trials_to_modify_inds) && any(itrial == op.trials_to_modify_inds)
-                matchrow = itrial == op.trials_to_modify_inds;
-                start_time_edit = trials_to_modify_sec(matchrow, 1);
-                end_time_edit = trials_to_modify_sec(matchrow, 2);
-                audiofiles_this_channel.starts(itrial) = audiofiles_this_channel.starts(itrial) + start_time_edit; 
-                audiofiles_this_channel.ends(itrial) = audiofiles_this_channel.ends(itrial) + end_time_edit; 
-            end
+
         
             % Convert times to sample indices
             startSample = max(1, round(audiofiles_this_channel.starts(itrial) * fs_adj));
@@ -140,7 +148,7 @@ for i_syncrow = 1:n_syncrows
     
         end
     
-        audiofiles_table_filename = [paths.annot, filesep, paths.filestr, 'audiofiles-',cutchan, '.tsv']; 
+        audiofiles_table_filename = [paths.trial_audio,filesep, paths.filestr, 'audiofiles-',cutchan, '.tsv']; 
         audiofiles_this_channel = renamevars(audiofiles_this_channel,{'starts','ends','duration'},...
                             {'audfile_start','audfile_end','audfile_dur'}); 
         writetable(audiofiles_this_channel, audiofiles_table_filename, 'FileType','text','Delimiter','tab');

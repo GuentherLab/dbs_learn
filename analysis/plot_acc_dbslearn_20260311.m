@@ -68,3 +68,72 @@ title({'multisyllabic accuracy during Testing-DBS-ON - subject 1',['first ', num
 hax.XTickLabels = xticklabels;
 ylim([0 1])
 box off
+
+
+
+%% sml002
+cd('C:\Dropbox\R01-SML_data_shared\derivatives\sml002\annot')
+set(0, 'DefaultTextInterpreter', 'none')
+
+%% test-on subsyl 
+
+frac_trials_to_plot = .25;
+
+t = readtable('sub-sml002_ses-subsyl_task-test1_run-9_trials-accuracy.tsv','FileType','text','Delimiter','tab')
+t = t(1:round(frac_trials_to_plot*height(t)),:);
+t.acc = sum([isnan(t.onset_error) | t.onset_error==7, isnan(t.coda_error) | t.coda_error==7], 2) / 2; 
+t.acc_binary = [isnan(t.onset_error) | t.onset_error==7] & isnan(t.coda_error) 
+g = grpstats(t,"stim_group","mean","DataVars",["acc","acc_binary"]);
+
+% close all
+hfig = figure; 
+hbar = bar(g.mean_acc);
+hax = gca;
+xticklabels = {,'train-ON-nn','novel-nn','train-OFF-nn', 'novel-nat'};
+ylabel({'proportion of clusters correct', '(ignoring epenthesis)'})
+title({'subsyllabic accuracy during Testing-DBS-ON - subject 2',['first ', num2str(100*frac_trials_to_plot), 'pct of trials']})
+hax.XTickLabels = xticklabels;
+ylim([0 1])
+box off
+
+hfig = figure; 
+hbar = bar(g.mean_acc_binary);
+hax = gca;
+xticklabels = {,'train-ON-nn','novel-nn','train-OFF-nn', 'novel-nat'};
+ylabel({'proportion of trials correct', '(ignoring epenthesis)'})
+title({'subsyllabic accuracy during Testing-DBS-ON - subject 2',['first ', num2str(100*frac_trials_to_plot), 'pct of trials']})
+hax.XTickLabels = xticklabels;
+ylim([0 1])
+box off
+
+%% test-off multisyl 
+
+frac_trials_to_plot = .25;
+
+t = readtable('sub-sml002_ses-_task-test2_run-11_trials-accuracy.tsv','FileType','text','Delimiter','tab')
+t = t(1:round(frac_trials_to_plot*height(t)),:);
+t.acc = sum([isnan(t.onset_error) | t.onset_error==7, isnan(t.coda_error) | t.coda_error==7], 2) / 2; 
+t.acc_binary = [isnan(t.onset_error) | t.onset_error==7] & isnan(t.coda_error) 
+g = grpstats(t,"stim_group","mean","DataVars",["acc","acc_binary"]);
+
+close all
+hfig = figure; 
+hbar = bar(g.mean_acc);
+hax = gca;
+xticklabels = {,'train-OFF-nn','novel-nat','novel-nn', 'train-ON-nn'};
+ylabel({'proportion of clusters correct', '(ignoring epenthesis)'})
+title({'subsyllabic accuracy during Testing-DBS-OFF - subject 2',['first ', num2str(100*frac_trials_to_plot), 'pct of trials']})
+hax.XTickLabels = xticklabels;
+ylim([0 1])
+box off
+
+hfig = figure; 
+hbar = bar(g.mean_acc_binary);
+hax = gca;
+xticklabels = {,'train-OFF-nn','novel-nat','novel-nn', 'train-ON-nn'};
+ylabel({'proportion of clusters correct', '(ignoring epenthesis)'})
+title({'subsyllabic accuracy during Testing-DBS-OFF - subject 2',['first ', num2str(100*frac_trials_to_plot), 'pct of trials']})
+hax.XTickLabels = xticklabels;
+ylim([0 1])
+box off
+

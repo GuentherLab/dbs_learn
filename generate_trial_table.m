@@ -159,5 +159,7 @@ end
 
 op.ntrials = height(trials); 
 nancol = nan(op.ntrials,1);
-trials = [trials, table(nancol,nancol,nancol,nancol,nancol,nancol,nancol,nancol,'VariableNames',...
-    {'t_stim_vis_on','t_stim_vis_off','t_stim_aud_on','t_stim_aud_off','t_go_vis_on','t_go_aud_on','t_go_aud_off','go_delay'})]; 
+trialnum = [1:ntrials]';
+trials = [trials, table(trialnum, nancol,nancol,nancol,nancol,nancol,nancol,nancol,nancol,'VariableNames',...
+    {                    'trialnum', 't_stim_vis_on','t_stim_vis_off','t_stim_aud_on','t_stim_aud_off','t_go_vis_on','t_go_aud_on','t_go_aud_off','go_delay'})]; 
+trials = movevars(trials,{'trialnum'},'Before',1); 

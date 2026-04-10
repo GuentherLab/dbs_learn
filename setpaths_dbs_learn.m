@@ -81,10 +81,16 @@ if exist('op','var')
                     paths.filestr = ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_run-',num2str(op.run), '_']; 
                     if isfield(op,'step')
                         paths.filestr_step = [paths.filestr 'step-',op.step '_']; 
-                    elseif ~isfield(op,'step')
+                    elseif ~isfield(op,'step') && isfield(paths,'filestr_step')
                         paths = rmfield(paths,'filestr_step'); % remove unless it's clearly been added to op
                     end
                     
+                    % trial boundary adjustments - gets created during create_sync_landmark_tables.m
+                    % .... gets used during audio/video trial cutting
+                    %%% note that these adjustments will not change any subsequent statistical analyses....
+                    %%% ... they change where the trial-wise audio/video files will be cut to make it easier to do annotations
+                    %%% generally this will be useful for when the sub answers early and you want the file to start earlier
+                    paths.trialfile_boundary_adjustments = [paths.trial_audio, filesep, paths.filestr, 'boundary_adjustments.tsv'];
 
                 end
             end
