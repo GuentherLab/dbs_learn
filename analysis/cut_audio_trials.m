@@ -8,7 +8,7 @@ function cut_audio_trials(op)
 
 %% params
 vardefault('op',struct);
-field_default('op','sub','sml002');
+field_default('op','sub','sml001');
 field_default('op','ses','subsyl');
 
 field_default('op','channels_to_cut',{'mic','headphone'});
@@ -57,7 +57,9 @@ n_syncrows = height(sync);
 for i_syncrow = 1:n_syncrows
     op.task = sync.task{i_syncrow}; 
     op.run = sync.run(i_syncrow);
-    op.step = sync.step{i_syncrow}; 
+    if  ismember('step', sync.Properties.VariableNames) % in subject sml001, we didn't add 'step' to sourcedata filenames
+        op.step = sync.step{i_syncrow}; 
+    end
     if ~any(string(op.task) == tasks) 
         fprintf(['   skipping task ''', op.task, ''' because it is not a trial-based task \n'])
         continue
@@ -86,7 +88,11 @@ for i_syncrow = 1:n_syncrows
     audio_time_minus_trialtab_time = sync.t1(lnd_audiorow) - sync.t1(lnd_trialsrow);  
     
         % load trial data
-    trials = readtable([paths.beh, filesep, paths.filestr_step, 'trials.tsv'], 'FileType','text','Delimiter','tab');
+    if  ismember('step', sync.Properties.VariableNames) % in subject sml001, we didn't add 'step' to sourcedata filenames
+        trials = readtable([paths.beh, filesep, paths.filestr_step, 'trials.tsv'], 'FileType','text','Delimiter','tab');
+    else
+        trials = readtable([paths.beh, filesep, paths.filestr, 'trials.tsv'], 'FileType','text','Delimiter','tab');
+    end
     ntrials = height(trials);
     cellcol = cell(ntrials,1);
     nancol = NaN(ntrials,1);
@@ -122,7 +128,12 @@ for i_syncrow = 1:n_syncrows
         audiofiles_this_channel.dir = repmat([paths.trial_audio_task_chan],ntrials,1); 
         
         % load full run audio
-        audiofile_full_run = [paths.src_audvid, filesep, paths.filestr_step,'recording-', cutchan, '.wav']; 
+        if  ismember('step', sync.Properties.VariableNames) % in subject sml001, we didn't add 'step' to sourcedata filenames
+            audiofile_full_run = [paths.src_audvid, filesep, paths.filestr_step,'recording-', cutchan, '.wav']; 
+        else 
+            audiofile_full_run = [paths.src_audvid, filesep, paths.filestr,'recording-', cutchan, '.wav']; 
+        end
+
         [run_aud, fs] = audioread(audiofile_full_run); 
         
         % adjust for differences in file/clock speeds
