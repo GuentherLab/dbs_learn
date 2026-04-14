@@ -371,7 +371,7 @@ switch op.task
                 %t1=toc(tic1)
                 evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
                 trials.dn_sync_event_on(itrial) = evt_; % overwrite this with the more accurate time from send_event
-                trials.t_sync_event_on(itrial) = tmp_managed_time
+                trials.t_sync_event_on(itrial) = tmp_managed_time;
                 trials.t_trial_start(itrial) = tmp_managed_time; % overwrite this with the more accurate time from send_event
 
                 % ## Ideally, we should move the following to the end of trial ##
@@ -504,7 +504,7 @@ switch op.task
         pause(0.1)
         fprintf('\n\n')
         proceed = ''; 
-        while isempty(proceed) || ~(proceed=='y')
+        while ~strcmp(proceed,'y')
             proceed = input('Enter ''y'' to end this task and proceed to sync pulses [if applicable]    ','s');
         end
     

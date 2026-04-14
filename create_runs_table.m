@@ -20,9 +20,12 @@
 %%% ... in this case, step ID will already have been assigned by some other means
 %%% ... and it can be read from a trials table file and automatically added to the table
 
-function [paths] = create_runs_table (op)
+function create_runs_table(op)
 
 field_default('op','sub','qqq');
+
+paths = setpaths_dbs_learn(op);
+paths.data = paths.data_local;
 
 % either run on the specified session or (default) on both sessions
 if isfield(op,'ses')
@@ -33,7 +36,7 @@ end
 
 for thisses = seslist
     op.ses = thisses{1};
-    [paths] = setpaths_dbs_learn(op);
+    [paths] = setpaths_dbs_learn(op,paths);
     paths.src_runs_table = [paths.src_ses, filesep, 'sub-',op.sub,'_ses-',op.ses, '_runs.tsv']; 
 
     if ~exist(paths.src_ses,'dir')
@@ -72,7 +75,7 @@ for thisses = seslist
                 runs.step{itask} = steplabel{1}; 
             end
     
-            fprintf(['Creating empty runs table to fill in here:\n    ',paths.src_runs_table,'\n'])
+            fprintf(['Creating empty runs table to fill in here:\n    %s,\n'],paths.src_runs_table)
             writetable(runs, paths.src_runs_table, "FileType","text", "Delimiter","tab"); 
         end
     end
