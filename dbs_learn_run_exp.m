@@ -50,8 +50,8 @@ field_default('op','beepoffset',0.1)
 field_default('op','dbs_state','unknown')
 field_default('op','step_id','unknown')
 
-field_default('op','task_sync_aligning_event','t_go_aud_off')
-field_default('op','task_sync_field','t_sync_event_on')
+field_default('op','task_sync_aligning_event','t_trial_start')
+field_default('op','task_sync_field_name','t_sync_event_on')
 
 
 % starting clock
@@ -342,20 +342,49 @@ switch op.task
                 fprintf('Task Resumed ...\n')
             end
             %<<<
+
+            
             %%
         
             audiorow = strcmp(trials.name{itrial}, stim_audio.name); % find the row of the audio file to play
             stimread = stim_audio.stimreads{audiorow};
-        
-            
             
             % pause until target stim start time for this trial
             % ZY notes, keeping this redundant for compatibility and easy reversion.
-            % Zy addition, added t_trial_start to mark the programmatic start of trial, this is more relevant for (pre-)processing rather than task-alignment
-            ok=ManageTime('wait', CLOCK, TIME_STIM_START); 
-            trials.t_trial_start(itrial) = ManageTime('current', CLOCK);
+            ok=ManageTime('wait', CLOCK, TIME_STIM_START);
+            %
+            %% >>>> ZY addition
+            % this part is intended to send a sync pulse to CED for alignment to tasking timing in 
+            % before 2026-04-14, this tracks t_stim_vis_on.
+            % from 2026-04-14, we opt to track t_trial_start instead, 
+            % note, "send_event() introduces a delay of around 0.2 seconds, which could be optimized later [TODO]
+            % the current placement before t_trial_start time being defined is carefully considered
+            % .... as evt_ is the exact delivery time and is not impacted by the delay so this makes
+            % .... t_trial_start time very close to evt_
+
+            if FLAG_SEND_TASK_EVENT_TO_CED
+                % code 3 => sending on DI port 3 of Dev 2
+                %tic1=tic;
+                % we cannot do "t_sync_event_on"
+                [evt_,evtCode_] = send_event([3],[],0.01,0.005,1,'Dev2',0); 
+                tmp_managed_time = ManageTime('current', CLOCK);
+                %t1=toc(tic1)
+                evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
+                trials.dn_sync_event_on(itrial) = evt_; % overwrite this with the more accurate time from send_event
+                trials.t_sync_event_on(itrial) = tmp_managed_time
+                trials.t_trial_start(itrial) = tmp_managed_time; % overwrite this with the more accurate time from send_event
+
+                % ## Ideally, we should move the following to the end of trial ##
+                tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
+                save(paths.trig_events_tab_fname, 'tblEvt');
+            else
+                % Zy addition, added t_trial_start to mark the programmatic start of trial, this is more relevant for (pre-)processing rather than task-alignment
+                trials.t_trial_start(itrial) = ManageTime('current', CLOCK);
+            end
+            %% <<<
+             
             
-            % show stim orthography
+            %% show stim orthography
             if strcmp(op.visual, 'orthography')
                 set(annoStr.Plus, 'Visible','off');
                 set(annoStr.Stim, 'String', trials.name{itrial});
@@ -419,31 +448,11 @@ switch op.task
             %%% AM note 2026/2/15: if time is measured before or after playing the go beep, there is 5-25ms difference (running on stryx laptop)
             %     this may be because it reads in the beep as a whole chunk 
             trials.t_go_aud_on(itrial) = ManageTime('current', CLOCK); 
+            trials.dn_go_aud_on(itrial) = now(); % for external syncing with beacon times (~usec delay)
             %tic0=tic;
             while ~isDone(beepread); sound=beepread();headwrite(sound);end;
             %t2=toc(tic0); fprintf('beep length %1.0f msec\n', t2*1000)
             %
-            
-             %% >>>> ZY addition
-            % I put this before AM defines TIME_TRIAL_START, only so that I don't add additional delay to actual presentation
-            % but we can figure out a better way to integrate
-        
-            % can tblEvt be saved as a .tsv table rather than mat? can it be combined with the beacon times table? 
-            % from 2026-04-14, we opt to track t_go_aud_off instead, but delayed around 0.2
-            if FLAG_SEND_TASK_EVENT_TO_CED
-                % code 3 => sending on DI port 3 of Dev 2
-                %tic1=tic;
-                trials.t_sync_event_on(itrial) = ManageTime('current', CLOCK);
-                % we cannot do "t_sync_event_on"
-                [evt_,evtCode_] = send_event([3],[],0.01,0.005,1,'Dev2',0); 
-                %t1=toc(tic1)
-                evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
-                trials.dn_sync_event_on(itrial) = evt_; % overwrite this with the more accurate time from send_event
-                % ## Ideally, we should move the following to the end of trial ##
-                tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
-                save(paths.trig_events_tab_fname, 'tblEvt');
-            end
-            %% <<<
 
             % resetting beep player
             reset(beepread);reset(headwrite);
