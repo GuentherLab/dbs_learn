@@ -12,11 +12,25 @@ auddevs = audiodevinfo;
     devs_out = {auddevs.output.Name};
 
     switch computername
-        case {'677-GUE-WL-0010','677-GUE-WL-0012'}  % AM Thinkpad X1 laptops
+        case {'677-GUE-WL-0010','677-GUE-WL-0012'}  % AM work/dbs-learn laptops - Thinkpad X1
             if any(contains(devs_out,'Focusrite'))
-                aud.device_out = 'Speakers (Focusrite USB Audio)'; 
-                aud.device_in_1 = 'Analogue 1 + 2 (Focusrite USB Audio)';
-                aud.device_in_2 = 'Analogue 3 + 4 (Focusrite USB Audio)';
+                % aud.device_in_1 = 'Analogue 1 + 2 (Focusrite USB Audio)';
+
+                aud.device_in_1 = devs_in{find(contains(devs_in,'Analogue 1 + 2 '),1)}; 
+
+
+                % aud.device_in_2 = 'Analogue 3 + 4 (Focusrite USB Audio)';
+
+                aud.device_in_2 = devs_in{find(contains(devs_in,'Analogue 3 + 4 '),1)}; 
+
+                % focusrite out-channel 1 sometimes gets renamed, but should also contain the string below
+                aud.device_out = devs_out{find(contains(devs_out,' Focusrite USB Audio)'),1)};
+
+                % this part of the device name needs to get removed for audioDeviceWriter.... not sure why
+                aud.device_out = strrep(aud.device_out,' (Windows DirectSound)',''); 
+                aud.device_in_1 = strrep(aud.device_in_1,' (Windows DirectSound)','');
+                aud.device_in_2 = strrep(aud.device_in_2,' (Windows DirectSound)','');
+
             
             elseif any(contains(devs_out,'Headphones (WF-C500)') ) % if using bluetooth headphones
 
@@ -48,7 +62,7 @@ auddevs = audiodevinfo;
         % % %     end
         
         otherwise 
-            error('unknown computer; please add preferred devices to "audio device section" of flvoice_run.m')
+            error('unknown computer; please add preferred devices to setup_audio_devices.m')
     end
 % % % end
 

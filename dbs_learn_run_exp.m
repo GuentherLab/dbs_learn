@@ -16,7 +16,6 @@
 
 function dbs_learn_run_exp(op)
 
-starting_trial = 1; %%% if not ==1, currently causes a crash when compiling trial data at end of run
 
 
 % set priority for matlab to high for running experiments
@@ -29,19 +28,18 @@ if ~isempty(parpool_obj)
     cancel(parpool_obj.FevalQueue.RunningFutures);   % new-style futures queue (R2022b+)
 end
 
-paths.data =  'C:\dbs_learn_data'; % local location to save when running experiment
-paths = setpaths_dbs_learn(paths,op);
-op.task_computer = getenv('COMPUTERNAME'); 
-
 % reset DAQs
 reset_daq()
 
 %% default parameters
+vardefault('op',struct);
 field_default('op','sub','qqq'); 
 field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
-field_default('op','task', 'famil'), 
+field_default('op','task', 'famil'); 
+field_default('op','step', 'unknown'); 
 field_default('op','record_audio', 1); 
 field_default('op','require_keypress_every_trial',0); % if true, experimenter must press any key at end of trial to proceed to next trial
+field_default('op','starting_trial',1); %%% not fully tested for any value aside from 1 - may cause crash/problems
 field_default('op','vis_offset_to_go',[0.25, 0.75]); % min and max of delay (jittered) between visual offset and GO cue presentation
 field_default('op','ntrials_between_breaks',50); 
 field_default('op','visual','orthography'); 
@@ -51,6 +49,9 @@ field_default('op','deviceHead','')
 field_default('op','beepoffset',0.1)   
 field_default('op','dbs_state','unknown')
 field_default('op','step_id','unknown')
+
+field_default('op','task_sync_aligning_event','t_go_aud_off')
+field_default('op','task_sync_field','t_sync_event_on')
 
 
 % starting clock
@@ -63,6 +64,10 @@ op.pulse.interval = 0.4;
 op.pulse.count = 3; 
 op.pulse.duration = 0.05; 
 
+% file paths setup
+paths.data =  'C:\dbs_learn_data'; % local location to save when running experiment
+paths = setpaths_dbs_learn(op,paths);
+op.task_computer = getenv('COMPUTERNAME'); 
 if ~exist(paths.beh, 'dir')
     mkdir(paths.beh)
 end
@@ -78,6 +83,7 @@ if ~isempty(allEventFiles)
 else
     op.run = 1;
 end
+paths = setpaths_dbs_learn(op,paths); %  add paths that are now specified due to run number being assigned
 
 % specifying paths for this run
 paths.run_exp_op_file = [paths.beh, filesep, paths.filestr_step,'run-exp-op.mat'];
@@ -148,12 +154,12 @@ if op.record_audio
     if ~exist(paths.src_audvid, 'dir')
         mkdir(paths.src_audvid) %%%% recording function fails if the dir doesn't already exist
     end
-    paths.aud_record_filename_headphone = [paths.src_audvid, filesep, paths.filestr_step,'recording-headphone.wav'];
-
+    paths.aud_record_filename_headphone = [paths.src_audvid, filesep, paths.filestr_step,'recording-mic.wav'];
+                                     
     aud_record_obj_1 = parfeval(@recordMonoDevice, 0, ...
        aud.device_in_1, paths.aud_record_filename_headphone);
     if isfield(aud,'device_in_2')
-        paths.aud_record_filename_mic = [paths.src_audvid, filesep, paths.filestr_step,'recording-mic.wav'];
+        paths.aud_record_filename_mic = [paths.src_audvid, filesep, paths.filestr_step,'recording-headphone.wav'];
         aud_record_obj_2 = parfeval(@recordMonoDevice, 0, ...
            aud.device_in_2, paths.aud_record_filename_mic);
     end
@@ -211,11 +217,11 @@ if op.is_dbs_run
    
     % pause()
 
-    FLAG_SEND_EVENT_STIM_ONSET = 1;
+    FLAG_SEND_TASK_EVENT_TO_CED = 1;
 
 elseif ~op.is_dbs_run
     beacon_times = [];
-    FLAG_SEND_EVENT_STIM_ONSET = 0;
+    FLAG_SEND_TASK_EVENT_TO_CED = 0;
 end
 
 %>>> ZY addition
@@ -224,7 +230,7 @@ taskState = struct('task_isRunning',true,'pause_requested',false,'pause_isActive
 figTC=taskControlGUI_release(taskState,op.pulse,paths.beacon_times_fname,beacon_times);
 
 % # Initialize EvtTime
-if FLAG_SEND_EVENT_STIM_ONSET
+if FLAG_SEND_TASK_EVENT_TO_CED
     evt = []; evtCode = [];
     paths.trig_events_tab_fname = [paths.beh, filesep, paths.filestr_step,'trig-events.mat']
 end
@@ -260,7 +266,7 @@ switch op.task
     %% trialed speech tasks
     case {'famil','assess','pretest','trainA','trainB','test1','test2','fds'}   
 
-        [trials, op] = generate_trial_table(op); 
+        [trials, op] = generate_trial_table(op, paths); 
         paths.trial_info_file = [paths.beh, filesep, paths.filestr_step,'trials.tsv'];
         writetable(trials, paths.trial_info_file , 'Delimiter', '\t', 'FileType', 'text')
         
@@ -279,7 +285,7 @@ switch op.task
         stim_audio.dur=cellfun(@(a,b)numel(a)/b, stim_audio.audio, stim_audio.fs);
 
         %% Main trial loop
-        for itrial = starting_trial:op.ntrials
+        for itrial = op.starting_trial:op.ntrials
             if (mod(itrial,op.ntrials_between_breaks) == 0) && (itrial ~= op.ntrials)  % Break after every X trials, but not on the last
                 fprintf(['Scheduled break at every ', num2str(op.ntrials_between_breaks), ' trial\n'])
         
@@ -362,24 +368,8 @@ switch op.task
             drawnow;
             trials.t_stim_vis_on(itrial) = ManageTime('current', CLOCK);
             %trials.dn_stim_vis_on(itrial) = now(); % for external syncing with beacon times
-            %% >>>> ZY addition
-            % I put this before AM defines TIME_TRIAL_START, only so that I don't add additional delay to actual presentation
-            % but we can figure out a better way to integrate
-        
-            % can tblEvt be saved as a .tsv table rather than mat? can it be combined with the beacon times table? 
-        
-            if FLAG_SEND_EVENT_STIM_ONSET
-                % code 3 => sending on DI port 3 of Dev 2
-                [evt_,evtCode_] = send_event([3],[],0.1,0.04,1,'Dev2',0); 
-                trials.t_sync_event_on(itrial) = ManageTime('current', CLOCK);
-                trials.dn_sync_event_on(itrial) = now(); % overwrite this with the more accurate time from send_event
-                evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
-                % ## Ideally, we should move the following to the end of trial ##
-                tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
-                save(paths.trig_events_tab_fname, 'tblEvt');
-            end
-            %% <<<
-        
+           
+            
             % play stim sound - ASAP after visual onset
              %%% AM note 2026/2/15: if time is measured before starting the while loop or after the first iteration of the while loop...
              % %  ..... this is generally a 20ms difference (likely due to the size of the audio chunk being written)
@@ -429,12 +419,39 @@ switch op.task
             %%% AM note 2026/2/15: if time is measured before or after playing the go beep, there is 5-25ms difference (running on stryx laptop)
             %     this may be because it reads in the beep as a whole chunk 
             trials.t_go_aud_on(itrial) = ManageTime('current', CLOCK); 
-            while ~isDone(beepread); sound=beepread();headwrite(sound);end;reset(beepread);reset(headwrite);
+            %tic0=tic;
+            while ~isDone(beepread); sound=beepread();headwrite(sound);end;
+            %t2=toc(tic0); fprintf('beep length %1.0f msec\n', t2*1000)
+            %
+            
+             %% >>>> ZY addition
+            % I put this before AM defines TIME_TRIAL_START, only so that I don't add additional delay to actual presentation
+            % but we can figure out a better way to integrate
         
+            % can tblEvt be saved as a .tsv table rather than mat? can it be combined with the beacon times table? 
+            % from 2026-04-14, we opt to track t_go_aud_off instead, but delayed around 0.2
+            if FLAG_SEND_TASK_EVENT_TO_CED
+                % code 3 => sending on DI port 3 of Dev 2
+                %tic1=tic;
+                trials.t_sync_event_on(itrial) = ManageTime('current', CLOCK);
+                % we cannot do "t_sync_event_on"
+                [evt_,evtCode_] = send_event([3],[],0.01,0.005,1,'Dev2',0); 
+                %t1=toc(tic1)
+                evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
+                trials.dn_sync_event_on(itrial) = evt_; % overwrite this with the more accurate time from send_event
+                % ## Ideally, we should move the following to the end of trial ##
+                tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
+                save(paths.trig_events_tab_fname, 'tblEvt');
+            end
+            %% <<<
+
+            % resetting beep player
+            reset(beepread);reset(headwrite);
+            %
             % assume beep-off time based on beep-on time and beep duration
             % ... this beep-off time is exactly as accurate as the beep-on measurement
             trials.t_go_aud_off(itrial) = trials.t_go_aud_on(itrial) + op.beep_dur; 
-        
+            %}
             if strcmp(op.visual, 'fixpoint') || strcmp(op.visual, 'orthography')
                 set(annoStr.Plus, 'color','g');
                 drawnow;
