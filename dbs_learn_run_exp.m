@@ -41,7 +41,7 @@ field_default('op','record_audio', 1);
 field_default('op','require_keypress_every_trial',0); % if true, experimenter must press any key at end of trial to proceed to next trial
 field_default('op','starting_trial',1); %%% not fully tested for any value aside from 1 - may cause crash/problems
 field_default('op','vis_offset_to_go',[0.25, 0.75]); % min and max of delay (jittered) between visual offset and GO cue presentation
-field_default('op','ntrials_between_breaks',50); 
+field_default('op','ntrials_between_breaks',50); % note that breaks get skipped if there's less than 10 trials left in the run
 field_default('op','visual','orthography'); 
 field_default('op','is_dbs_run',1); % if yes, will try to send beacon pulses for syncing
 field_default('op','visual', 'orthography'), 
@@ -286,7 +286,10 @@ switch op.task
 
         %% Main trial loop
         for itrial = op.starting_trial:op.ntrials
-            if (mod(itrial,op.ntrials_between_breaks) == 0) && (itrial ~= op.ntrials)  % Break after every X trials, but not on the last
+            % Break after every X trials, b
+            
+            if (mod(itrial,op.ntrials_between_breaks) == 0) &&...
+                    itrial < op.ntrials-10  %% don't break if we have less than 10 trials left
                 fprintf(['Scheduled break at every ', num2str(op.ntrials_between_breaks), ' trial\n'])
         
                 if op.is_dbs_run
