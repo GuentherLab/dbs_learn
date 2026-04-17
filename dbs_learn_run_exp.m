@@ -229,7 +229,7 @@ end
 %>>> ZY addition
 % # Initialize Taskcontrol
 taskState = struct('task_isRunning',true,'pause_requested',false,'pause_isActive',false,'stop_requested',false);
-figTC=taskControlGUI_release(taskState,op.pulse,paths.beacon_times_fname,beacon_times);
+figTC=taskControlGUI_inDev(taskState,op.pulse,paths.beacon_times_fname,beacon_times);
 
 % # Initialize EvtTime
 if FLAG_SEND_TASK_EVENT_TO_CED
@@ -329,7 +329,7 @@ switch op.task
             %% >>>> ZY addition
             % check task control
             if ~exist('figTC','var') || ~ishandle(figTC)
-                figTC=taskControlGUI_release(taskState,op.pulse,paths.beacon_times_fname,beacon_times);
+                figTC=taskControlGUI_inDev(taskState,op.pulse,paths.beacon_times_fname,beacon_times);
             end
             ud = get(figTC,'UserData'); taskState = ud.taskState;
             if taskState.pause_requested
