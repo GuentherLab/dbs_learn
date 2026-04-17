@@ -28,8 +28,8 @@ if ~isempty(parpool_obj)
     cancel(parpool_obj.FevalQueue.RunningFutures);   % new-style futures queue (R2022b+)
 end
 
-% reset DAQs
-reset_daq()
+% create a clean slate by resetting DAQs and stopping any existing timers (in case they were left running from a previous run)
+[ok,~,~] = clean_slate();
 
 %% default parameters
 vardefault('op',struct);
@@ -56,6 +56,8 @@ field_default('op','task_sync_field_name','t_sync_event_on')
 
 % starting clock
 CLOCKp = ManageTime('start');
+op.Timing.Clock_Reference = CLOCKp;
+%
 TIME_PREPARE = 0.5; % Waiting period before experiment begin (sec)
 runtimer = tic; % timer for elapsed time in this run
 
@@ -226,13 +228,22 @@ end
 
 %>>> ZY addition
 % # Initialize Taskcontrol
-taskState = struct('task_isRunning',true,'pause_requested',false,'pause_isActive',false);
+taskState = struct('task_isRunning',true,'pause_requested',false,'pause_isActive',false,'stop_requested',false);
 figTC=taskControlGUI_release(taskState,op.pulse,paths.beacon_times_fname,beacon_times);
 
 % # Initialize EvtTime
 if FLAG_SEND_TASK_EVENT_TO_CED
     evt = []; evtCode = [];
     paths.trig_events_tab_fname = [paths.beh, filesep, paths.filestr_step,'trig-events.mat']
+    % note all daqs have been cleared through clean_slate()
+    % thi needs to verified to not cause floating digital outputs
+    op.nidaq = [];
+    op.nidaq.devID_task = 'Dev2';
+    op.nidaq.devObj_task = connect_to_nidaq(op.nidaq.devID_task);
+    %
+else
+    op.nidaq = [];
+    op.nidaq.devObj_task = [];
 end
 %<<<
 
@@ -331,17 +342,23 @@ switch op.task
                 while taskState.pause_requested 
                     pause(0.2)
                     ud = get(figTC,'UserData'); taskState = ud.taskState;
+                    %% saving updated beaconTimes
+                    if length(ud.beacon_times)>=length(beacon_times)
+                        beacon_times = ud.beacon_times;
+                        save(paths.beacon_times_fname,'beacon_times'); %%%% redundant - ok to delete
+                    end
+                    %%
+                    if taskState.stop_requested
+                        fprintf('Task Stopped from TaskControl_Panel ...\n')
+                        return
+                    end
                 end
                 % resuming
                 ud = get(figTC,'UserData'); taskState = ud.taskState;
                 taskState.pause_isActive = 0; % no longer in pause
                 ud.taskState = taskState; set(figTC,'UserData',ud); 
                 ud.updateGUIBasedOnTaskState();
-                % saving updated beaconTimes
-                if length(ud.beacon_times)>=length(beacon_times)
-                    beacon_times = ud.beacon_times;
-                    save(paths.beacon_times_fname,'beacon_times'); %%%% redundant - ok to delete
-                end
+                
                 fprintf('Task Resumed ...\n')
             end
             %<<<
@@ -367,9 +384,17 @@ switch op.task
 
             if FLAG_SEND_TASK_EVENT_TO_CED
                 % code 3 => sending on DI port 3 of Dev 2
-                %tic1=tic;
                 % we cannot do "t_sync_event_on"
-                [evt_,evtCode_] = send_event([3],[],0.01,0.005,1,'Dev2',0); 
+                %[evt_,evtCode_] = send_event([3],[],0.01,0.005,1,'Dev2',0); 
+                %tic1=tic;
+                % send event has 20msec overhead in addition to the pulse timecourse. this is longer when dio is not already initialized, likely due to initialization time.
+                if isempty(op.nidaq.devObj_task)
+                    op.nidaq.devObj_task = connect_to_nidaq(op.nidaq.devID_task);
+                end 
+                [evt_,evtCode_] = send_event([3],'dio',op.nidaq.devObj_task,...
+                    'Interval',0.006,'Dur',0.005,'Rep',1,'StartDelay',0,...
+                    'verbose',0,'debug_timer',0); 
+                %fprintf("send_event duration: %.3f seconds\n", toc(tic1))
                 tmp_managed_time = ManageTime('current', CLOCK);
                 %t1=toc(tic1)
                 evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
@@ -549,6 +574,8 @@ end
 % reset DAQs
 reset_daq()
 
+% find all timers and stop them
+ok = cleanup_timers();
 %
 close all
 
@@ -556,9 +583,30 @@ close all
 end
 
 
+function dio=connect_to_nidaq( devID)
+    dio = digitalio('nidaq',devID);
+    addline(dio, 0:7, 'out');
+    data = [0 0 0 0 0 0 0 0];
+    putvalue(dio,data);
+end
+
+function [ok,dio1,dio2] = clean_slate()
+    % reset DAQs
+    [dio1,dio2] = reset_daq();
+    
+    % find all timers and stop them
+    ok = cleanup_timers();
+end
 
 
-
+function ok = cleanup_timers()
+    timers = timerfindall;
+    for i = 1:length(timers)
+        stop(timers(i))
+        delete(timers(i))
+    end
+    ok = true;
+end
 
 
 function out = ManageTime(option, varargin)
