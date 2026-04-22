@@ -246,12 +246,6 @@ else
     op.nidaq.devObj_task = [];
 end
 %<<<
-
-% save paths and audio info into ops struct
-op.paths_run_exp = paths; 
-op.audiodev = aud; 
-op % show options on command line
-save(paths.run_exp_op_file, 'op'); % save ops structure, including paths  
     
 
 %% show instructions onscreen to subject
@@ -280,6 +274,12 @@ switch op.task
         [trials, op] = generate_trial_table(op, paths); 
         paths.trial_info_file = [paths.beh, filesep, paths.filestr_step,'trials.tsv'];
         writetable(trials, paths.trial_info_file , 'Delimiter', '\t', 'FileType', 'text')
+
+        % save paths, audio, and trial info into ops struct
+        op.paths_run_exp = paths; 
+        op.audiodev = aud; 
+        op % show options on command line
+        save(paths.run_exp_op_file, 'op'); % save ops structure, including paths  
         
          % load the stim audio in this table and play them, rather than loading them on every trial
         stim_audio = table;
