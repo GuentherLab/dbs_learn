@@ -76,7 +76,6 @@ for i_syncrow = 1:n_syncrows
     %%%% because headphone and mic have exactly the same timepoints (both collected simultaneously on focusrite)....
     %%%% .... we just load syncing for headphone channel and apply it to both
     landmark_audiofile = [paths.src_audvid, filesep, paths.filestr,'recording-', landmark_audio_chan, '.wav']; 
-    [landmark_aud_path, landmark_aud_name, landmark_aud_ext] = fileparts(landmark_audiofile); 
     lnd_audiorow = sync.run == op.run & strcmp(sync.task,op.task) & cellfun(@(x)contains(x,getfname(landmark_audiofile)), sync.filename);
     lnd_trialsrow = sync.run == op.run & strcmp(sync.task,op.task) & cellfun(@(x)contains(x,'trials.tsv'), sync.filename);
 

@@ -7,9 +7,9 @@ function create_sync_landmark_tables(op)
 
 vardefault('op',struct);
 field_default('op','sub','sml001');
+
 field_default('op','ses','subsyl');
     % field_default('op','ses','multisyl');
-field_default('op','ses','multisyl');
 
 [paths, compname] = setpaths_dbs_learn(op);
 
@@ -43,7 +43,7 @@ for irow = 1:nrows
     op.run = sync.run(irow); 
     runrowmatch = string(op.task) == runs.task & op.run == runs.run;
 
-    if  ismember('step', sync.Properties.VariableNames) && ~all(isnan(sync.step)) % in subject sml001, we didn't add 'step' to sourcedata filenames
+    if  ismember('step', sync.Properties.VariableNames) && iscell(sync.step) % in subject sml001, we didn't add 'step' to sourcedata filenames
         op.step = runs.step{runrowmatch};
     end
 
@@ -53,7 +53,7 @@ for irow = 1:nrows
         case 'trials.tsv'
             sync.dir{irow} = paths.beh;
 
-            if  ismember('step', sync.Properties.VariableNames) && ~all(isnan(sync.step)) % in subject sml001, we didn't add 'step' to sourcedata filenames            
+            if  ismember('step', sync.Properties.VariableNames) && iscell(sync.step) % in subject sml001, we didn't add 'step' to sourcedata filenames            
                     sync.filename{irow} = [paths.filestr_step, 'trials.tsv'];
             else
                 sync.filename{irow} = [paths.filestr, 'trials.tsv'];
