@@ -6,12 +6,10 @@
 function create_sync_landmark_tables(op)
 
 vardefault('op',struct);
-field_default('op','sub','sml002');
+field_default('op','sub','sml001');
 field_default('op','ses','multisyl');
 
 [paths, compname] = setpaths_dbs_learn(op);
-
-
 
 runs = readtable(paths.src_runs_table,'Filetype','text', 'Delimiter','tab'); 
 tasks = runs.task; 
@@ -42,15 +40,24 @@ for irow = 1:nrows
     op.task = sync.task{irow};
     op.run = sync.run(irow); 
     runrowmatch = string(op.task) == runs.task & op.run == runs.run;
-    op.step = runs.step{runrowmatch};
+
+    if  ismember('step', sync.Properties.VariableNames) && ~all(isnan(sync.step)) % in subject sml001, we didn't add 'step' to sourcedata filenames
+        op.step = runs.step{runrowmatch};
+    end
+
     paths = setpaths_dbs_learn(op); % get paths.filestr
 
     switch sync.filetype{irow} % set dir 
         case 'trials.tsv'
             sync.dir{irow} = paths.beh;
-            sync.filename{irow} = [paths.filestr_step, 'trials.tsv'];
+
+            if  ismember('step', sync.Properties.VariableNames) && ~all(isnan(sync.step)) % in subject sml001, we didn't add 'step' to sourcedata filenames            
+                    sync.filename{irow} = [paths.filestr_step, 'trials.tsv'];
+            else
+                sync.filename{irow} = [paths.filestr, 'trials.tsv'];
+            end
+
             sync.t1_description{irow} = 'trials.t_go_aud_on(1)..... first trial go beep onset'; 
-            
 
             % open trial table to add go beep datapoints
             trials = readtable([sync.dir{irow}, filesep, sync.filename{irow}], 'Filetype','text', 'Delimiter','tab');
