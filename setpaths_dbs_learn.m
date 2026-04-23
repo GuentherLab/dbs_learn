@@ -1,6 +1,6 @@
 %%% set matlab paths for DBS-Multisyllabic experiment 
 
-function [paths, compname] = setpaths_dbs_learn(op)
+function [paths, compname] = setpaths_dbs_learn(op,paths)
 
 % if a paths variable wasn't provided, create a new one
 if ~exist('paths','var')
@@ -44,7 +44,6 @@ paths.bml = [paths.code, filesep, 'bml']; % RM Richardson lab toolbox
      [paths.code_dbs_learn, filesep, 'util'];...
     [paths.stim];...
     paths.spm;... %%%% use version of spm in fieldtrip
-    % paths.bml;...
     paths.fieldtrip_toolbox;...
 };
 
@@ -52,11 +51,7 @@ paths.bml = [paths.code, filesep, 'bml']; % RM Richardson lab toolbox
 
 addpath(genpath([paths.code_dbs_learn, filesep, 'NIMH_daqtoolbox_(Apr-7-2016)'])) % needed for sending beacon
 
-% bml_defaults()
-% ft_defaults()
-
-
-set(0,'defaulttextInterpreter','none') 
+set(0,'defaultTextInterpreter','none') 
 
 %% if more details are provided, output relevant paths
 

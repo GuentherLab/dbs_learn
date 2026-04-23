@@ -16,7 +16,6 @@
 
 function dbs_learn_run_exp(op)
 
-starting_trial = 1; %%% if not ==1, currently causes a crash when compiling trial data at end of run
 
 
 % set priority for matlab to high for running experiments
@@ -29,21 +28,20 @@ if ~isempty(parpool_obj)
     cancel(parpool_obj.FevalQueue.RunningFutures);   % new-style futures queue (R2022b+)
 end
 
-paths.data =  'C:\dbs_learn_data'; % local location to save when running experiment
-paths = setpaths_dbs_learn(paths,op);
-op.task_computer = getenv('COMPUTERNAME'); 
-
-% reset DAQs
-reset_daq()
+% create a clean slate by resetting DAQs and stopping any existing timers (in case they were left running from a previous run)
+[ok,~,~] = clean_slate();
 
 %% default parameters
+vardefault('op',struct);
 field_default('op','sub','qqq'); 
 field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
-field_default('op','task', 'famil'), 
+field_default('op','task', 'famil'); 
+field_default('op','step', 'unknown'); 
 field_default('op','record_audio', 1); 
 field_default('op','require_keypress_every_trial',0); % if true, experimenter must press any key at end of trial to proceed to next trial
+field_default('op','starting_trial',1); %%% not fully tested for any value aside from 1 - may cause crash/problems
 field_default('op','vis_offset_to_go',[0.25, 0.75]); % min and max of delay (jittered) between visual offset and GO cue presentation
-field_default('op','ntrials_between_breaks',50); 
+field_default('op','ntrials_between_breaks',50); % note that breaks get skipped if there's less than 10 trials left in the run
 field_default('op','visual','orthography'); 
 field_default('op','is_dbs_run',1); % if yes, will try to send beacon pulses for syncing
 field_default('op','visual', 'orthography'), 
@@ -52,9 +50,14 @@ field_default('op','beepoffset',0.1)
 field_default('op','dbs_state','unknown')
 field_default('op','step_id','unknown')
 
+field_default('op','task_sync_aligning_event','t_trial_start')
+field_default('op','task_sync_field_name','t_sync_event_on')
+
 
 % starting clock
 CLOCKp = ManageTime('start');
+op.Timing.Clock_Reference = CLOCKp;
+%
 TIME_PREPARE = 0.5; % Waiting period before experiment begin (sec)
 runtimer = tic; % timer for elapsed time in this run
 
@@ -63,6 +66,10 @@ op.pulse.interval = 0.4;
 op.pulse.count = 3; 
 op.pulse.duration = 0.05; 
 
+% file paths setup
+paths.data =  'C:\dbs_learn_data'; % local location to save when running experiment
+paths = setpaths_dbs_learn(op,paths);
+op.task_computer = getenv('COMPUTERNAME'); 
 if ~exist(paths.beh, 'dir')
     mkdir(paths.beh)
 end
@@ -78,6 +85,7 @@ if ~isempty(allEventFiles)
 else
     op.run = 1;
 end
+paths = setpaths_dbs_learn(op,paths); %  add paths that are now specified due to run number being assigned
 
 % specifying paths for this run
 paths.run_exp_op_file = [paths.beh, filesep, paths.filestr_step,'run-exp-op.mat'];
@@ -148,12 +156,12 @@ if op.record_audio
     if ~exist(paths.src_audvid, 'dir')
         mkdir(paths.src_audvid) %%%% recording function fails if the dir doesn't already exist
     end
-    paths.aud_record_filename_headphone = [paths.src_audvid, filesep, paths.filestr_step,'recording-headphone.wav'];
-
+    paths.aud_record_filename_headphone = [paths.src_audvid, filesep, paths.filestr_step,'recording-mic.wav'];
+                                     
     aud_record_obj_1 = parfeval(@recordMonoDevice, 0, ...
        aud.device_in_1, paths.aud_record_filename_headphone);
     if isfield(aud,'device_in_2')
-        paths.aud_record_filename_mic = [paths.src_audvid, filesep, paths.filestr_step,'recording-mic.wav'];
+        paths.aud_record_filename_mic = [paths.src_audvid, filesep, paths.filestr_step,'recording-headphone.wav'];
         aud_record_obj_2 = parfeval(@recordMonoDevice, 0, ...
            aud.device_in_2, paths.aud_record_filename_mic);
     end
@@ -211,30 +219,33 @@ if op.is_dbs_run
    
     % pause()
 
-    FLAG_SEND_EVENT_STIM_ONSET = 1;
+    FLAG_SEND_TASK_EVENT_TO_CED = 1;
 
 elseif ~op.is_dbs_run
     beacon_times = [];
-    FLAG_SEND_EVENT_STIM_ONSET = 0;
+    FLAG_SEND_TASK_EVENT_TO_CED = 0;
 end
 
 %>>> ZY addition
 % # Initialize Taskcontrol
-taskState = struct('task_isRunning',true,'pause_requested',false,'pause_isActive',false);
-figTC=taskControlGUI_release(taskState,op.pulse,paths.beacon_times_fname,beacon_times);
+taskState = struct('task_isRunning',true,'pause_requested',false,'pause_isActive',false,'stop_requested',false);
+figTC=taskControlGUI_inDev(taskState,op.pulse,paths.beacon_times_fname,beacon_times);
 
 % # Initialize EvtTime
-if FLAG_SEND_EVENT_STIM_ONSET
+if FLAG_SEND_TASK_EVENT_TO_CED
     evt = []; evtCode = [];
     paths.trig_events_tab_fname = [paths.beh, filesep, paths.filestr_step,'trig-events.mat']
+    % note all daqs have been cleared through clean_slate()
+    % thi needs to verified to not cause floating digital outputs
+    op.nidaq = [];
+    op.nidaq.devID_task = 'Dev2';
+    op.nidaq.devObj_task = connect_to_nidaq(op.nidaq.devID_task);
+    %
+else
+    op.nidaq = [];
+    op.nidaq.devObj_task = [];
 end
 %<<<
-
-% save paths and audio info into ops struct
-op.paths_run_exp = paths; 
-op.audiodev = aud; 
-op % show options on command line
-save(paths.run_exp_op_file, 'op'); % save ops structure, including paths  
     
 
 %% show instructions onscreen to subject
@@ -260,9 +271,15 @@ switch op.task
     %% trialed speech tasks
     case {'famil','assess','pretest','trainA','trainB','test1','test2','fds'}   
 
-        [trials, op] = generate_trial_table(op); 
+        [trials, op] = generate_trial_table(op, paths); 
         paths.trial_info_file = [paths.beh, filesep, paths.filestr_step,'trials.tsv'];
         writetable(trials, paths.trial_info_file , 'Delimiter', '\t', 'FileType', 'text')
+
+        % save paths, audio, and trial info into ops struct
+        op.paths_run_exp = paths; 
+        op.audiodev = aud; 
+        op % show options on command line
+        save(paths.run_exp_op_file, 'op'); % save ops structure, including paths  
         
          % load the stim audio in this table and play them, rather than loading them on every trial
         stim_audio = table;
@@ -279,8 +296,11 @@ switch op.task
         stim_audio.dur=cellfun(@(a,b)numel(a)/b, stim_audio.audio, stim_audio.fs);
 
         %% Main trial loop
-        for itrial = starting_trial:op.ntrials
-            if (mod(itrial,op.ntrials_between_breaks) == 0) && (itrial ~= op.ntrials)  % Break after every X trials, but not on the last
+        for itrial = op.starting_trial:op.ntrials
+            % Break after every X trials, b
+            
+            if (mod(itrial,op.ntrials_between_breaks) == 0) &&...
+                    itrial < op.ntrials-10  %% don't break if we have less than 10 trials left
                 fprintf(['Scheduled break at every ', num2str(op.ntrials_between_breaks), ' trial\n'])
         
                 if op.is_dbs_run
@@ -309,7 +329,7 @@ switch op.task
             %% >>>> ZY addition
             % check task control
             if ~exist('figTC','var') || ~ishandle(figTC)
-                figTC=taskControlGUI_release(taskState,op.pulse,paths.beacon_times_fname,beacon_times);
+                figTC=taskControlGUI_inDev(taskState,op.pulse,paths.beacon_times_fname,beacon_times);
             end
             ud = get(figTC,'UserData'); taskState = ud.taskState;
             if taskState.pause_requested
@@ -322,34 +342,77 @@ switch op.task
                 while taskState.pause_requested 
                     pause(0.2)
                     ud = get(figTC,'UserData'); taskState = ud.taskState;
+                    %% saving updated beaconTimes
+                    if length(ud.beacon_times)>=length(beacon_times)
+                        beacon_times = ud.beacon_times;
+                        save(paths.beacon_times_fname,'beacon_times'); %%%% redundant - ok to delete
+                    end
+                    %%
+                    if taskState.stop_requested
+                        fprintf('Task Stopped from TaskControl_Panel ...\n')
+                        return
+                    end
                 end
                 % resuming
                 ud = get(figTC,'UserData'); taskState = ud.taskState;
                 taskState.pause_isActive = 0; % no longer in pause
                 ud.taskState = taskState; set(figTC,'UserData',ud); 
                 ud.updateGUIBasedOnTaskState();
-                % saving updated beaconTimes
-                if length(ud.beacon_times)>=length(beacon_times)
-                    beacon_times = ud.beacon_times;
-                    save(paths.beacon_times_fname,'beacon_times'); %%%% redundant - ok to delete
-                end
+                
                 fprintf('Task Resumed ...\n')
             end
             %<<<
+
+            
             %%
         
             audiorow = strcmp(trials.name{itrial}, stim_audio.name); % find the row of the audio file to play
             stimread = stim_audio.stimreads{audiorow};
-        
-            
             
             % pause until target stim start time for this trial
             % ZY notes, keeping this redundant for compatibility and easy reversion.
-            % Zy addition, added t_trial_start to mark the programmatic start of trial, this is more relevant for (pre-)processing rather than task-alignment
-            ok=ManageTime('wait', CLOCK, TIME_STIM_START); 
-            trials.t_trial_start(itrial) = ManageTime('current', CLOCK);
+            ok=ManageTime('wait', CLOCK, TIME_STIM_START);
+            %
+            %% >>>> ZY addition
+            % this part is intended to send a sync pulse to CED for alignment to tasking timing in 
+            % before 2026-04-14, this tracks t_stim_vis_on.
+            % from 2026-04-14, we opt to track t_trial_start instead, 
+            % note, "send_event() introduces a delay of around 0.2 seconds, which could be optimized later [TODO]
+            % the current placement before t_trial_start time being defined is carefully considered
+            % .... as evt_ is the exact delivery time and is not impacted by the delay so this makes
+            % .... t_trial_start time very close to evt_
+
+            if FLAG_SEND_TASK_EVENT_TO_CED
+                % code 3 => sending on DI port 3 of Dev 2
+                % we cannot do "t_sync_event_on"
+                %[evt_,evtCode_] = send_event([3],[],0.01,0.005,1,'Dev2',0); 
+                %tic1=tic;
+                % send event has 20msec overhead in addition to the pulse timecourse. this is longer when dio is not already initialized, likely due to initialization time.
+                if isempty(op.nidaq.devObj_task)
+                    op.nidaq.devObj_task = connect_to_nidaq(op.nidaq.devID_task);
+                end 
+                [evt_,evtCode_] = send_event([3],'dio',op.nidaq.devObj_task,...
+                    'Interval',0.006,'Dur',0.005,'Rep',1,'StartDelay',0,...
+                    'verbose',0,'debug_timer',0); 
+                %fprintf("send_event duration: %.3f seconds\n", toc(tic1))
+                tmp_managed_time = ManageTime('current', CLOCK);
+                %t1=toc(tic1)
+                evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
+                trials.dn_sync_event_on(itrial) = evt_; % overwrite this with the more accurate time from send_event
+                trials.t_sync_event_on(itrial) = tmp_managed_time;
+                trials.t_trial_start(itrial) = tmp_managed_time; % overwrite this with the more accurate time from send_event
+
+                % ## Ideally, we should move the following to the end of trial ##
+                tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
+                save(paths.trig_events_tab_fname, 'tblEvt');
+            else
+                % Zy addition, added t_trial_start to mark the programmatic start of trial, this is more relevant for (pre-)processing rather than task-alignment
+                trials.t_trial_start(itrial) = ManageTime('current', CLOCK);
+            end
+            %% <<<
+             
             
-            % show stim orthography
+            %% show stim orthography
             if strcmp(op.visual, 'orthography')
                 set(annoStr.Plus, 'Visible','off');
                 set(annoStr.Stim, 'String', trials.name{itrial});
@@ -362,24 +425,8 @@ switch op.task
             drawnow;
             trials.t_stim_vis_on(itrial) = ManageTime('current', CLOCK);
             %trials.dn_stim_vis_on(itrial) = now(); % for external syncing with beacon times
-            %% >>>> ZY addition
-            % I put this before AM defines TIME_TRIAL_START, only so that I don't add additional delay to actual presentation
-            % but we can figure out a better way to integrate
-        
-            % can tblEvt be saved as a .tsv table rather than mat? can it be combined with the beacon times table? 
-        
-            if FLAG_SEND_EVENT_STIM_ONSET
-                % code 3 => sending on DI port 3 of Dev 2
-                [evt_,evtCode_] = send_event([3],[],0.1,0.04,1,'Dev2',0); 
-                trials.t_sync_event_on(itrial) = ManageTime('current', CLOCK);
-                trials.dn_sync_event_on(itrial) = now(); % overwrite this with the more accurate time from send_event
-                evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
-                % ## Ideally, we should move the following to the end of trial ##
-                tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
-                save(paths.trig_events_tab_fname, 'tblEvt');
-            end
-            %% <<<
-        
+           
+            
             % play stim sound - ASAP after visual onset
              %%% AM note 2026/2/15: if time is measured before starting the while loop or after the first iteration of the while loop...
              % %  ..... this is generally a 20ms difference (likely due to the size of the audio chunk being written)
@@ -429,12 +476,19 @@ switch op.task
             %%% AM note 2026/2/15: if time is measured before or after playing the go beep, there is 5-25ms difference (running on stryx laptop)
             %     this may be because it reads in the beep as a whole chunk 
             trials.t_go_aud_on(itrial) = ManageTime('current', CLOCK); 
-            while ~isDone(beepread); sound=beepread();headwrite(sound);end;reset(beepread);reset(headwrite);
-        
+            trials.dn_go_aud_on(itrial) = now(); % for external syncing with beacon times (~usec delay)
+            %tic0=tic;
+            while ~isDone(beepread); sound=beepread();headwrite(sound);end;
+            %t2=toc(tic0); fprintf('beep length %1.0f msec\n', t2*1000)
+            %
+
+            % resetting beep player
+            reset(beepread);reset(headwrite);
+            %
             % assume beep-off time based on beep-on time and beep duration
             % ... this beep-off time is exactly as accurate as the beep-on measurement
             trials.t_go_aud_off(itrial) = trials.t_go_aud_on(itrial) + op.beep_dur; 
-        
+            %}
             if strcmp(op.visual, 'fixpoint') || strcmp(op.visual, 'orthography')
                 set(annoStr.Plus, 'color','g');
                 drawnow;
@@ -478,7 +532,7 @@ switch op.task
         pause(0.1)
         fprintf('\n\n')
         proceed = ''; 
-        while isempty(proceed) || ~(proceed=='y')
+        while ~strcmp(proceed,'y')
             proceed = input('Enter ''y'' to end this task and proceed to sync pulses [if applicable]    ','s');
         end
     
@@ -520,6 +574,8 @@ end
 % reset DAQs
 reset_daq()
 
+% find all timers and stop them
+ok = cleanup_timers();
 %
 close all
 
@@ -527,9 +583,30 @@ close all
 end
 
 
+function dio=connect_to_nidaq( devID)
+    dio = digitalio('nidaq',devID);
+    addline(dio, 0:7, 'out');
+    data = [0 0 0 0 0 0 0 0];
+    putvalue(dio,data);
+end
+
+function [ok,dio1,dio2] = clean_slate()
+    % reset DAQs
+    [dio1,dio2] = reset_daq();
+    
+    % find all timers and stop them
+    ok = cleanup_timers();
+end
 
 
-
+function ok = cleanup_timers()
+    timers = timerfindall;
+    for i = 1:length(timers)
+        stop(timers(i))
+        delete(timers(i))
+    end
+    ok = true;
+end
 
 
 function out = ManageTime(option, varargin)

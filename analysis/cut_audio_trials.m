@@ -8,8 +8,11 @@ function cut_audio_trials(op)
 
 %% params
 vardefault('op',struct);
+
 field_default('op','sub','sml001');
-field_default('op','ses','subsyl');
+
+% field_default('op','ses','multisyl');
+    field_default('op','ses','subsyl');
 
 field_default('op','channels_to_cut',{'mic','headphone'});
 
@@ -57,7 +60,7 @@ n_syncrows = height(sync);
 for i_syncrow = 1:n_syncrows
     op.task = sync.task{i_syncrow}; 
     op.run = sync.run(i_syncrow);
-    if  ismember('step', sync.Properties.VariableNames) % in subject sml001, we didn't add 'step' to sourcedata filenames
+    if  ismember('step', sync.Properties.VariableNames) && iscell(sync.step) % in subject sml001, we didn't add 'step' to sourcedata filenames
         op.step = sync.step{i_syncrow}; 
     end
     if ~any(string(op.task) == tasks) 
@@ -88,7 +91,7 @@ for i_syncrow = 1:n_syncrows
     audio_time_minus_trialtab_time = sync.t1(lnd_audiorow) - sync.t1(lnd_trialsrow);  
     
         % load trial data
-    if  ismember('step', sync.Properties.VariableNames) % in subject sml001, we didn't add 'step' to sourcedata filenames
+    if  ismember('step', sync.Properties.VariableNames) && iscell(sync.step) % in subject sml001, we didn't add 'step' to sourcedata filenames
         trials = readtable([paths.beh, filesep, paths.filestr_step, 'trials.tsv'], 'FileType','text','Delimiter','tab');
     else
         trials = readtable([paths.beh, filesep, paths.filestr, 'trials.tsv'], 'FileType','text','Delimiter','tab');
@@ -115,11 +118,9 @@ for i_syncrow = 1:n_syncrows
  
     for ichan = 1:length(op.channels_to_cut)
         
-        
-        
         % make trial audio directories
         cutchan = op.channels_to_cut{ichan}; 
-        paths.trial_audio_task_chan = [paths.trial_audio, filesep, 'ses-',op.ses, '_task-',op.task,'_',cutchan]; % trial audio clips for this run and this recording chan
+        paths.trial_audio_task_chan = [paths.trial_audio, filesep, 'ses-',op.ses, '_task-',op.task,'_run-',num2str(op.run),'_',cutchan]; % trial audio clips for this run and this recording chan
         if ~exist(paths.trial_audio, 'dir'); system(['mkdir ' paths.trial_audio]); end
         if ~exist(paths.trial_audio_task_chan, 'dir'); system(['mkdir ' paths.trial_audio_task_chan]); end
         
@@ -128,7 +129,7 @@ for i_syncrow = 1:n_syncrows
         audiofiles_this_channel.dir = repmat([paths.trial_audio_task_chan],ntrials,1); 
         
         % load full run audio
-        if  ismember('step', sync.Properties.VariableNames) % in subject sml001, we didn't add 'step' to sourcedata filenames
+        if  ismember('step', sync.Properties.VariableNames)  && iscell(sync.step)  % in subject sml001, we didn't add 'step' to sourcedata filenames
             audiofile_full_run = [paths.src_audvid, filesep, paths.filestr_step,'recording-', cutchan, '.wav']; 
         else 
             audiofile_full_run = [paths.src_audvid, filesep, paths.filestr,'recording-', cutchan, '.wav']; 

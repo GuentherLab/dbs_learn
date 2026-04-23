@@ -1,4 +1,6 @@
-function reset_daq()
+function [dio1,dio2]=reset_daq()
+    dio1 = [];
+    dio2 = [];
     try 
         dio = digitalio('nidaq','Dev1');
         addline(dio, 0:7, 'out');

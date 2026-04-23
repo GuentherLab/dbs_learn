@@ -1,4 +1,4 @@
-function [trials, op] = generate_trial_table(op)
+function [trials, op] = generate_trial_table(op, paths)
 
 %% create table describing stimuli for each trial of dbs-learn experiment
 %
@@ -12,8 +12,6 @@ function [trials, op] = generate_trial_table(op)
 
 
 %% initial setup and parameters
-
-setpaths_dbs_learn()
 
 %%% specify the number of repetitions for each stim group within each task
 % no entries for famil or assses because we just present the lists once in order
@@ -159,7 +157,7 @@ end
 
 op.ntrials = height(trials); 
 nancol = nan(op.ntrials,1);
-trialnum = [1:ntrials]';
+trialnum = [1:op.ntrials]';
 trials = [trials, table(trialnum, nancol,nancol,nancol,nancol,nancol,nancol,nancol,nancol,'VariableNames',...
     {                    'trialnum', 't_stim_vis_on','t_stim_vis_off','t_stim_aud_on','t_stim_aud_off','t_go_vis_on','t_go_aud_on','t_go_aud_off','go_delay'})]; 
 trials = movevars(trials,{'trialnum'},'Before',1); 
