@@ -9,7 +9,7 @@ function cut_audio_trials(op)
 %% params
 vardefault('op',struct);
 
-field_default('op','sub','sml001');
+field_default('op','sub','sml002');
 
 % field_default('op','ses','multisyl');
     field_default('op','ses','subsyl');
@@ -18,8 +18,8 @@ field_default('op','channels_to_cut',{'mic','headphone'});
 
 field_default('op','trial_event_start','t_go_aud_on'); % field name in trial table
 
-field_default('op','trial_event_end','t_stim_aud_off'); % field name in trial table (of the next trial)
-% field_default('op','trial_event_end','t_stim_aud_on'); % field name in trial table (of the next trial)
+% field_default('op','trial_event_end','t_stim_aud_off'); % field name in trial table (of the next trial)
+field_default('op','trial_event_end','t_stim_aud_on'); % field name in trial table (of the next trial)
 
 field_default('op','last_trial_duration',6); % seconds
 

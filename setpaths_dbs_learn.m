@@ -38,6 +38,10 @@ paths.spm = [paths.code, filesep, 'spm12']; %%%% use version of spm in fieldtrip
 paths.fieldtrip_toolbox = [paths.code, filesep, 'fieldtrip']; % only used in analysis, not running experiment
 paths.bml = [paths.code, filesep, 'bml']; % RM Richardson lab toolbox
 
+% paths to specific reference files
+paths.subject_list_master = [paths.data_remote, filesep, 'subject_list_master.xlsx'];
+paths.cohort_dbs_states = [paths.data_remote, filesep, 'cohort_dbs_states.tsv']; 
+
  paths_to_add =  {paths.code_dbs_learn;...
      [paths.code_analysis];...
      [paths.annot];...
