@@ -34,7 +34,7 @@ paths.annot = [paths.code_analysis, filesep, 'annot']; % small annotation files
 paths.stim = [paths.code_dbs_learn, filesep, 'stimuli'];
 
 % external toolboxes
-paths.spm = [paths.code, filesep, 'spm12']; %%%% use version of spm in fieldtrip
+paths.spm = [paths.code, filesep, 'spm12']; %%%% 
 paths.fieldtrip_toolbox = [paths.code, filesep, 'fieldtrip']; % only used in analysis, not running experiment
 paths.bml = [paths.code, filesep, 'bml']; % RM Richardson lab toolbox
 
