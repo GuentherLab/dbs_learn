@@ -14,7 +14,7 @@ field_default('op','sub','sml001');
 % field_default('op','ses','multisyl');
     field_default('op','ses','subsyl');
 
-    field_default('op','postproc_gain',5);
+    field_default('op','postproc_gain',1);
 
 field_default('op','channels_to_cut',{'mic','headphone'});
 
