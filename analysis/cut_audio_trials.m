@@ -9,10 +9,12 @@ function cut_audio_trials(op)
 %% params
 vardefault('op',struct);
 
-field_default('op','sub','sml002');
+field_default('op','sub','sml001');
 
 % field_default('op','ses','multisyl');
     field_default('op','ses','subsyl');
+
+    field_default('op','postproc_gain',5);
 
 field_default('op','channels_to_cut',{'mic','headphone'});
 
@@ -75,8 +77,8 @@ for i_syncrow = 1:n_syncrows
     % syncing
     %%%% because headphone and mic have exactly the same timepoints (both collected simultaneously on focusrite)....
     %%%% .... we just load syncing for headphone channel and apply it to both
-    landmark_audiofile = [paths.src_audvid, filesep, paths.filestr,'recording-', landmark_audio_chan, '.wav']; 
-    lnd_audiorow = sync.run == op.run & strcmp(sync.task,op.task) & cellfun(@(x)contains(x,getfname(landmark_audiofile)), sync.filename);
+    landmark_audiofile_str = ['recording-', landmark_audio_chan, '.wav']; % don't force run number to be anything specific... sometimes it won't match, e.g. sml001 subyl "run 56"
+    lnd_audiorow = sync.run == op.run & strcmp(sync.task,op.task) & cellfun(@(x)contains(x,getfname(landmark_audiofile_str)), sync.filename);
     lnd_trialsrow = sync.run == op.run & strcmp(sync.task,op.task) & cellfun(@(x)contains(x,'trials.tsv'), sync.filename);
 
     % skip runs for which landmarks haven't yet been marked
@@ -102,12 +104,13 @@ for i_syncrow = 1:n_syncrows
 
     % make table listing trialwise audio files
     audiofiles = [trials(:,trialvars_to_copy),...
-                   table(cellcol,cellcol,nancol,nancol,nancol, 'VariableNames',...
-                         {'filename','dir','starts','ends','duration'} )];
+                   table(cellcol,cellcol,nancol,nancol,nancol,nancol, 'VariableNames',...
+                         {'filename','dir','starts','ends','duration','postproc_gain'} )];
     audiofiles.starts = trials{:,op.trial_event_start} + audio_time_minus_trialtab_time; %%% starts is not in same time coord system as other times in trials table
     audiofiles.ends(1:end-1) = trials{2:end,op.trial_event_end} + audio_time_minus_trialtab_time;
     audiofiles.ends(end) = audiofiles.starts(end) + op.last_trial_duration; 
     audiofiles.duration = audiofiles.ends - audiofiles.starts; 
+    audiofiles.postproc_gain = repmat(op.postproc_gain, ntrials, 1); % the gain we apply now to the full-session audio when exporting trialwise audio
 
     % apply pre-specified manual edits to trialtimes - load manual boundary adjustments table
     trials_bound_adj = readtable(paths.trialfile_boundary_adjustments, 'FileType','text','Delimiter','tab'); 
@@ -149,6 +152,7 @@ for i_syncrow = 1:n_syncrows
             endSample   = min(size(run_aud, 1), round(audiofiles_this_channel.ends(itrial) * fs_adj));
     
             trialaud = run_aud(startSample:endSample, :);
+            trialaud = trialaud * op.postproc_gain; % apply gain multiplier to the trialwise file
         
             audiowrite([paths.trial_audio_task_chan filesep audiofiles_this_channel.filename{itrial}], trialaud, fs)
             % % % if check_this_trial && open_problematic_trials_in_praat % load created audio file in praat
@@ -159,7 +163,7 @@ for i_syncrow = 1:n_syncrows
     
         end
     
-        audiofiles_table_filename = [paths.trial_audio,filesep, paths.filestr, 'audiofiles-',cutchan, '.tsv']; 
+        audiofiles_table_filename = [paths.trial_audio,filesep, paths.filestr, 'audiofiles-',cutchan, '_newgain.tsv']; 
         audiofiles_this_channel = renamevars(audiofiles_this_channel,{'starts','ends','duration'},...
                             {'audfile_start','audfile_end','audfile_dur'}); 
         writetable(audiofiles_this_channel, audiofiles_table_filename, 'FileType','text','Delimiter','tab');

@@ -51,7 +51,7 @@ paths.cohort_dbs_states = [paths.data_remote, filesep, 'cohort_dbs_states.tsv'];
     paths.fieldtrip_toolbox;...
 };
 
- addpath(paths_to_add{:}); clear paths_to_add
+ addpath(paths_to_add{:});
 
 addpath(genpath([paths.code_dbs_learn, filesep, 'NIMH_daqtoolbox_(Apr-7-2016)'])) % needed for sending beacon
 
@@ -71,6 +71,7 @@ if exist('op','var')
             paths.landmarks_file = [paths.annot filesep, 'sub-',op.sub, '_ses-',op.ses,  '_sync-landmarks.tsv']; 
             paths.trial_audio = [paths.der_sub, filesep, 'trial-audio']; 
             paths.src_runs_table = [paths.src_ses, filesep, 'sub-',op.sub,'_ses-',op.ses, '_runs.tsv']; 
+            paths.sync_ses = [paths.annot, filesep, 'sub-',op.sub, '_ses-',op.ses, 'sync.tsv']; 
             if isfield(op,'task')
                 if isfield(op,'run')
 
