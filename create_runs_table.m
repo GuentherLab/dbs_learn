@@ -30,7 +30,7 @@ if ~exist('op','var')
     op = struct;
 end
 
-field_default('op','sub','sml003');
+field_default('op','sub','sml004');
 field_default('op','convert_from_task_schedule',1);
 
 paths = setpaths_dbs_learn(op);
@@ -52,7 +52,7 @@ for thisses = seslist
     end
 
     if exist(paths.src_runs_table, 'file')
-        fprintf(['\nRuns table file for ses==',op.ses ,' already exists - skipping \n..........%s'],paths.src_runs_table)
+        fprintf(['\nRuns table file for ses==',op.ses ,' already exists - skipping \n..........%s\n'],paths.src_runs_table)
     elseif ~exist(paths.landmarks_file,'file')
         switch op.ses
             case 'subsyl'
@@ -77,8 +77,8 @@ for thisses = seslist
             runs.notes = regexprep(runs.notes, '[\n\r]', '... '); % replace carriage returns w/ ellipses
 
             % task label renaming
-            task_rename_labels = {{'ssl_','msl_','fds','famil','assess','pretest','train_01','train_02','test_01','test_02','ctrl_bsl'      ,'speechhoc'},...
-                                  {''    ,''    ,'fds','famil','assess','pretest','trainA',  'trainB',  'test1',  'test2', 'base-controlled','reading-hand-oc'}};
+            task_rename_labels = {{'ssl_','msl_','fds','famil','assess','pretest','train_01','train_02','train_a','train_b','test_01','test_02','ctrl_bsl'      ,'speechhoc'},...
+                                  {''    ,''    ,'fds','famil','assess','pretest','trainA',  'trainB',  'trainA', 'trainB', 'test1',  'test2', 'base-controlled','reading-hand-oc'}};
             runs.task = replace(lower(runs.task),task_rename_labels{1},task_rename_labels{2}); 
 
             % main_task_rows = cellfun(@(x)contains(x,tasks),runs.task)
