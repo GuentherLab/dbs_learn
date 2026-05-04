@@ -68,6 +68,7 @@ if exist('op','var')
             paths.src_ses = [paths.src_sub, filesep,'ses-',op.ses]; 
             paths.beh = [paths.src_ses, filesep, 'beh'];
             paths.src_audvid = [paths.src_ses, filesep, 'audio-video'];
+            paths.src_gopro = [paths.src_ses, filesep, 'gopro'];
             paths.landmarks_file = [paths.annot filesep, 'sub-',op.sub, '_ses-',op.ses,  '_sync-landmarks.tsv']; 
             paths.trial_audio = [paths.der_sub, filesep, 'trial-audio']; 
             paths.src_runs_table = [paths.src_ses, filesep, 'sub-',op.sub,'_ses-',op.ses, '_runs.tsv']; 

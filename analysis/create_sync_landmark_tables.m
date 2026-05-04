@@ -6,7 +6,7 @@
 function create_sync_landmark_tables(op)
 
 vardefault('op',struct);
-field_default('op','sub','sml001');
+field_default('op','sub','sml003');
 
 field_default('op','ses','subsyl');
     % field_default('op','ses','multisyl');
@@ -19,7 +19,7 @@ tasks = runs.task;
 filetypes_suffix = {'trials.tsv','trials.tsv';...
     'audio.wav','recording-headphone.wav';...
     'preproc.mat','';.... % need to get expected filenames - probably include step ID 
-    'video','video';... %%%%% need to get correct filenames and types - gopro
+    'audio.wav','recording-gopro.mp4';... %%%%% list the audio stripped from gopro video, because video won't be stored in shared dropbox
     }; 
 nfiletypes = size(filetypes_suffix, 1); 
 nruns = length(tasks);
@@ -99,7 +99,8 @@ for irow = 1:nrows
             % need to specify name 
 
         case 'video'
-
+            sync.dir{irow} = paths.src_gopro; 
+            sync.filename{irow} = [paths.filestr,'recording-video.wav'];
     end
 end
 
