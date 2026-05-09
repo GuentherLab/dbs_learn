@@ -3,7 +3,9 @@
 cd('C:\docs\code\dbs_learn') 
 paths = setpaths_dbs_learn()
 
-target_folder = 'C:\Dropbox\R01-SML_data_shared\derivatives\sml002\trial-audio'; 
+target_folder = 'C:\Dropbox\R01-SML_data_shared\derivatives\sml001\trial-audio'; 
+% target_folder = 'C:\Dropbox\R01-SML_data_shared\derivatives\sml002\trial-audio'; 
+
 cd(target_folder)
 
 % 2. Get all contents and filter for subfolders
