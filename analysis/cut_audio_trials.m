@@ -143,7 +143,7 @@ for i_syncrow = 1:n_syncrows
         fs_adj = fs * [(sync.t2(lnd_audiorow) - sync.t1(lnd_audiorow)) / (sync.t2(lnd_trialsrow) - sync.t1(lnd_trialsrow))];
         
         for itrial = 1:ntrials
-            audiofiles_this_channel.filename{itrial} = ['trial', num2str(itrial), '_', cutchan '_', trials.name{itrial}, '.wav'];
+            audiofiles_this_channel.filename{itrial} = ['trial-', num2str(itrial), '_', cutchan '_', trials.name{itrial}, '.wav'];
         
 
         
