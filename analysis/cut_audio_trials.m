@@ -9,7 +9,7 @@ function cut_audio_trials(op)
 %% params
 vardefault('op',struct);
 
-field_default('op','sub','sml001');
+field_default('op','sub','sml003');
 
 % field_default('op','ses','multisyl');
     field_default('op','ses','subsyl');
@@ -143,27 +143,29 @@ for i_syncrow = 1:n_syncrows
         fs_adj = fs * [(sync.t2(lnd_audiorow) - sync.t1(lnd_audiorow)) / (sync.t2(lnd_trialsrow) - sync.t1(lnd_trialsrow))];
         
         for itrial = 1:ntrials
-            audiofiles_this_channel.filename{itrial} = ['trial-', num2str(itrial), '_', cutchan '_', trials.name{itrial}, '.wav'];
-        
 
+            if ~isnan(audiofiles_this_channel.starts(itrial)) % if trial table has timepoints for this trial... nan here usually indicates the run was ended before this trial
+                audiofiles_this_channel.filename{itrial} = ['trial-', num2str(itrial), '_', cutchan '_', trials.name{itrial}, '.wav'];
+            
+                % Convert times to sample indices
+                startSample = max(1, round(audiofiles_this_channel.starts(itrial) * fs_adj));
+                endSample   = min(size(run_aud, 1), round(audiofiles_this_channel.ends(itrial) * fs_adj));
         
-            % Convert times to sample indices
-            startSample = max(1, round(audiofiles_this_channel.starts(itrial) * fs_adj));
-            endSample   = min(size(run_aud, 1), round(audiofiles_this_channel.ends(itrial) * fs_adj));
+                trialaud = run_aud(startSample:endSample, :);
+                trialaud = trialaud * op.postproc_gain; % apply gain multiplier to the trialwise file
+            
+                audiowrite([paths.trial_audio_task_chan filesep audiofiles_this_channel.filename{itrial}], trialaud, fs)
+                % % % if check_this_trial && open_problematic_trials_in_praat % load created audio file in praat
+                % % %     cmd = ['praat --open ',  [audiofiles_this_channel.dir{itrial} filesep audiofiles_this_channel.filename{itrial}], ' &'];
+                % % %     system(cmd);
+                % % %     check_this_trial = 0; 
+                % % % end
+            end
     
-            trialaud = run_aud(startSample:endSample, :);
-            trialaud = trialaud * op.postproc_gain; % apply gain multiplier to the trialwise file
-        
-            audiowrite([paths.trial_audio_task_chan filesep audiofiles_this_channel.filename{itrial}], trialaud, fs)
-            % % % if check_this_trial && open_problematic_trials_in_praat % load created audio file in praat
-            % % %     cmd = ['praat --open ',  [audiofiles_this_channel.dir{itrial} filesep audiofiles_this_channel.filename{itrial}], ' &'];
-            % % %     system(cmd);
-            % % %     check_this_trial = 0; 
-            % % % end
-    
+
         end
     
-        audiofiles_table_filename = [paths.trial_audio,filesep, paths.filestr, 'audiofiles-',cutchan, '_newgain.tsv']; 
+        audiofiles_table_filename = [paths.trial_audio,filesep, paths.filestr, 'audiofiles-',cutchan, '.tsv']; 
         audiofiles_this_channel = renamevars(audiofiles_this_channel,{'starts','ends','duration'},...
                             {'audfile_start','audfile_end','audfile_dur'}); 
         writetable(audiofiles_this_channel, audiofiles_table_filename, 'FileType','text','Delimiter','tab');

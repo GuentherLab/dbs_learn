@@ -25,7 +25,7 @@ end
 filetypes_suffix = {'trials.tsv','trials.tsv';...
     'audio.wav','recording-headphone.wav';...
     'preproc.mat','';.... % need to get expected filenames - probably include step ID 
-    'audio.wav','recording-gopro.mp4';... %%%%% list the audio stripped from gopro video, because video won't be stored in shared dropbox
+    'audio.wav','recording-gopro.wav';... %%%%% list the audio stripped from gopro video, because video won't be stored in shared dropbox
     }; 
 nfiletypes = size(filetypes_suffix, 1); 
 nruns = length(tasks);
@@ -34,7 +34,7 @@ nancol = nan(nrows,1);
 celcol = cell(nrows,1); 
 runs_col =  nan(nrows,1);
 tasks_col = repelem(tasks,nfiletypes,1);
-step_col =  nan(nrows,1);
+step_col =  cell(nrows,1);
 filetype_col = repmat(filetypes_suffix(:,1),nruns,1);
 suffix_col = repmat(filetypes_suffix(:,2),nruns,1);
 
@@ -46,21 +46,22 @@ sync.t2_description = repmat({'last go beep onset'},nrows,1);
 
 for isynctabrow = 1:nrows
     op.task = sync.task{isynctabrow};
-    % % % % % op.run = sync.run(isynctabrow); 
-    runrowmatch = string(op.task) == runs.task %%%%% & op.run == runs.run;
+    runrowmatch = string(op.task) == runs.task; 
 
-    if  ismember('step', sync.Properties.VariableNames) && iscell(sync.step) % in subject sml001, we didn't add 'step' to sourcedata filenames
+    if  ismember('step', runs.Properties.VariableNames) && iscell(runs.step) % in subject sml001, we didn't add 'step' to sourcedata filenames
         op.step = runs.step{runrowmatch};
+        sync.step{isynctabrow} = op.step;
     end
 
     op.run = runs.run(runrowmatch); 
     paths = setpaths_dbs_learn(op); % get paths.filestr
+    sync.run(isynctabrow) = op.run;
 
-    switch sync.filetype{isynctabrow} % set dir 
+    switch sync.suffix{isynctabrow} % set dir 
         case 'trials.tsv'
             sync.dir{isynctabrow} = paths.beh;
 
-            if  ismember('step', sync.Properties.VariableNames) && iscell(sync.step) % in subject sml001, we didn't add 'step' to sourcedata filenames            
+            if  ismember('step', runs.Properties.VariableNames) && iscell(runs.step) % in subject sml001, we didn't add 'step' to sourcedata filenames            
                     sync.filename{isynctabrow} = [paths.filestr_step, 'trials.tsv'];
             else
                 sync.filename{isynctabrow} = [paths.filestr, 'trials.tsv'];
@@ -79,6 +80,9 @@ for isynctabrow = 1:nrows
             %%% ... they change where the trial-wise audio/video files will be cut to make it easier to do annotations
             %%% generally this will be useful for when the sub answers early and you want the file to start earlier
             if ~exist(paths.trialfile_boundary_adjustments, 'file')
+                if ~exist(fileparts(paths.trialfile_boundary_adjustments) , 'dir')
+                    mkdir( fileparts(paths.trialfile_boundary_adjustments) ) 
+                end
                 adjust_start = zeros(size(trials,1),1); 
                 adjust_end = zeros(size(trials,1),1); 
                 trials_bound_adj = [table(adjust_start,adjust_end), trials]; 
@@ -99,25 +103,29 @@ for isynctabrow = 1:nrows
                     sync.t2(isynctabrow) = trials.t_go_aud_on(end); 
             end
 
-        case 'audio.wav'
+        case 'recording-headphone.wav'
             sync.dir{isynctabrow} = paths.src_audvid; 
             sync.filename{isynctabrow} = [paths.filestr,'recording-headphone.wav'];
-        case 'preproc.mat'
+        case 'preproc.mat' %%%% not implemented yet.... will be blank
             % need to specify name 
 
-        case 'video'
-            sync.dir{irow} = paths.src_gopro; 
-            sync.filename{irow} = [paths.filestr,'recording-video.wav'];
+        case 'recording-gopro.wav'
+            sync.dir{isynctabrow} = paths.src_gopro; 
+            sync.filename{isynctabrow} = [paths.filestr,'recording-gopro.wav'];
     end
 end
 
 % save new landmarks sync file - check to avoid overwriting
 if ~exist(paths.landmarks_file,'file')
-    if ~exist(paths.der_sub,'dir')
-        mkdir(paths.der_sub)
+
+
+    if ~exist(paths.annot,'dir')
+          mkdir(paths.annot)
     end
+
+
     writetable(sync,paths.landmarks_file,'FileType','text','Delimiter','tab')
-    fprintf(['Landmarks file already exists - aborting \n..........%s'],paths.landmarks_file)
+    fprintf(['Writing landmarks file: ..........%s \n'],paths.landmarks_file)
 elseif exist(paths.landmarks_file,'file')
     fprintf(['Landmarks file already exists - not overwriting \n..........%s \n'],paths.landmarks_file)
 end
