@@ -80,16 +80,19 @@ function [event_times,code_sent,dio] = send_event(eventCode,varargin)
             %eventCodeVect = [1 1 0 0 0 0 1 1]; % all 
             %eventCodeVect = [1 1 0 0 0 0 1 1]; % screenclicker + iDBS 
             %         eventCodeVect = [1 1 1 1 1 1 1 1]
-            event_times = cat(1,event_times,now());
+            
             if ~debug_timer
                 putvalue(dio, eventCodeVect);
+                new_evt = now(); % for the most accurate timestamp
                 pause(Dur)
                 resetCodeVect = false(1,8);
                 putvalue(dio,resetCodeVect);
             else
+                new_evt = now();
                 pause(Dur)
                 fprintf('[debug_timer] putvalue skipped (Dur=%.3fs).\n', Dur);
             end
+             event_times = cat(1,event_times,new_evt);
             if verbose, fprintf('Beacon Off\n'); end
 
     end
