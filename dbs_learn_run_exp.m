@@ -53,10 +53,15 @@ field_default('op','step_id','unknown')
 field_default('op','task_sync_aligning_event','t_trial_start')
 field_default('op','task_sync_field_name','t_sync_event_on')
 
+% debugging controls
+debug_beep_timing = 1; % if 1, will send additional 1 pulse of taskSync just before beep to test timing of this event; this is used to verify that the timing of the event is accurate enough for our purposes (e.g. to align neural data to this event and interpret it as aligned to the beep/GO cue)
 
 % starting clock
+% ZY merged CLOCKp to be the sole clock for the experiment, rather than having a separate CLOCK and CLOCKp; this is to avoid confusion and potential errors from having multiple clocks; CLOCKp is now the main clock that we use for all timing in the experiment, including event logging and trial timing; it is started at the beginning of the experiment and serves as the reference for all subsequent time measurements
 CLOCKp = ManageTime('start');
+CLOCKp_dn = now();
 op.Timing.Clock_Reference = CLOCKp;
+op.Timing.Clock_Reference_dn = CLOCKp_dn;
 %
 TIME_PREPARE = 0.5; % Waiting period before experiment begin (sec)
 runtimer = tic; % timer for elapsed time in this run
@@ -89,6 +94,13 @@ paths = setpaths_dbs_learn(op,paths); %  add paths that are now specified due to
 
 % specifying paths for this run
 paths.run_exp_op_file = [paths.beh, filesep, paths.filestr_step,'run-exp-op.mat'];
+
+paths.beacon_times_fname = [paths.beh, filesep, paths.filestr_step,'beacon-times.mat'];
+paths.event_log_fname = fullfile(paths.beh,sprintf('%s_eventlog.tsv',paths.filestr_step)); % this log is organized in a long format with each row as an event; it is redundant with the trial table but integrates all events (not just trial-specific events) in one place for easier reference; it also has a column for event code which can be used to identify sync pulses in the data
+%op.log.events = table('Size',[0 4], 'VariableTypes',{'double','double','string','string'}, 'VariableNames',{'time','datenum','event','trial_info'}); % initialize an event log table in the ops struct to save events as they come in; this is redundant with the trial table but allows us to log non-trial-specific events in one place
+% convenience handle — captures file path and clock reference at run start
+log_event = @(event_name, trial_info, varargin) add_event(paths.event_log_fname, CLOCKp, event_name, trial_info, varargin{:});
+
 
 % set session-specific timing, stim, and path params
 switch op.task
@@ -188,16 +200,13 @@ set(annoStr.Stim, 'Visible','on');
 while ~isDone(sileread); sound=sileread();headwrite(sound);end;release(sileread);reset(headwrite);
 ok=ManageTime('wait', CLOCKp, TIME_PREPARE_END+2);
 set(annoStr.Stim, 'Visible','off');     % Turn off preparation page
-CLOCK=[];                               % Main clock (not yet started)
+%CLOCK=[];                               % Main clock (not yet started)
 
 
 %% BEACON SYNC SETUP......  
 
 %% AM note:  this .mat file is redunant with the .tsv - can we delete it? 
 %       zeyang doesn't want to delete one of them yet but is open to it in the future
-paths.beacon_times_fname = [paths.beh, filesep, paths.filestr_step,'beacon-times.mat'];
-paths.event_log_fname = fullfile(paths.beh,sprintf('%s_eventlog.tsv',paths.filestr_step)); % this log is organized in a long format with each row as an event; it is redundant with the trial table but integrates all events (not just trial-specific events) in one place for easier reference; it also has a column for event code which can be used to identify sync pulses in the data
-%op.log.events = table('Size',[0 4], 'VariableTypes',{'double','double','string','string'}, 'VariableNames',{'time','datenum','event','trial_info'}); % initialize an event log table in the ops struct to save events as they come in; this is redundant with the trial table but allows us to log non-trial-specific events in one place
 
 if op.is_dbs_run
     %%% send signal to percept here
@@ -213,9 +222,10 @@ if op.is_dbs_run
         %beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
         save(paths.beacon_times_fname, 'beacon_times');
         writematrix(beacon_times,strrep(paths.beacon_times_fname,'.mat','.tsv'),'FileType','text','Delimiter','tab')
-        % log pcpSync with add_event function (not log_event as CLOCK is not yet defined)
         for ii=1:length(temp_beacon_times)
-            add_event(paths.event_log_fname, [], 'pcp_sync', 'pre-run', NaN, temp_beacon_times(ii));
+            dn_ = temp_beacon_times(ii);
+            %add_event(paths.event_log_fname, CLOCKp, 'pcp_sync', 'pre-run', (dn_-CLOCKp_dn)*86400, dn_);
+            log_event('pcp_sync', 'pre-run', (dn_-CLOCKp_dn)*86400, dn_);
         end
         %
         answer = questdlg('Repeat pulse or proceed to experiment?','','Repeat pulse','Proceed to experiment','Repeat pulse');
@@ -268,11 +278,8 @@ set(annoStr.Stim, 'Visible','off')
 set(annoStr.Plus, 'Visible','on');
 
 % set up trial (see subfunction at end of script)
-CLOCK = ManageTime('start');                        % resets clock to t=0 (first-trial start-time)
-CLOCK_dn = now();
+%CLOCK = ManageTime('start');                        % resets clock to t=0 (first-trial start-time)
 TIME_STIM_START = 0;
-% convenience handle — captures file path and clock reference at run start
-log_event = @(event_name, trial_info, varargin) add_event(paths.event_log_fname, CLOCK, event_name, trial_info, varargin{:});
 
 
 %%%%%%%%%%%%%%%%%% RUN TASKS %%%%%%%%%%%%%%%%%%%%
@@ -360,7 +367,7 @@ switch op.task
                         %
                         for ii=1:length(beacon_times_new)
                             dn_ = beacon_times_new(ii);
-                            add_event(paths.event_log_fname, [], 'pcp_sync', sprintf('trial-%d', itrial), (dn_-CLOCK_dn)*86400, dn_); % log the new beacon times as user-triggered events in the event log; this is important for verifying that these sync pulses are captured in the data and aligned properly with the trial events
+                            log_event(paths.event_log_fname, 'pcp_sync', sprintf('trial-%d', itrial), (dn_-CLOCKp_dn)*86400, dn_); % log the new beacon times as user-triggered events in the event log; this is important for verifying that these sync pulses are captured in the data and aligned properly with the trial events
                         end
                         %log_event('pcp_sync', 'during-pause', NaN, temp_beacon_times(ii));
                     end
@@ -388,7 +395,7 @@ switch op.task
             
             % pause until target stim start time for this trial
             % ZY notes, keeping this redundant for compatibility and easy reversion.
-            ok=ManageTime('wait', CLOCK, TIME_STIM_START);
+            ok=ManageTime('wait', CLOCKp, TIME_STIM_START);
             %
             %% >>>> ZY addition
             % this part is intended to send a sync pulse to CED for alignment to tasking timing in 
@@ -412,12 +419,12 @@ switch op.task
                     'Interval',0.006,'Dur',0.005,'Rep',1,'StartDelay',0,...
                     'verbose',0,'debug_timer',0); 
                 %fprintf("send_event duration: %.3f seconds\n", toc(tic1))
-                % tmp_managed_time = ManageTime('current', CLOCK);
+                % tmp_managed_time = ManageTime('current', CLOCKp);
                 %t1=toc(tic1)
                 evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
                 trials.dn_sync_event_on(itrial) = evt_; % overwrite this with the more accurate time from send_event
                 % I am opting to not use the time obtained outside of the send_event function as this may delayed from evt_, around 0.2sec. we might as
-                tmp_time_sec = (evt_-CLOCK_dn)*86400; % convert to seconds
+                tmp_time_sec = (evt_-CLOCKp_dn)*86400; % convert to seconds
                 trials.t_sync_event_on(itrial) = tmp_time_sec; % overwrite this with the more accurate time from send_event
                 trials.t_trial_start(itrial) = tmp_time_sec; 
                 log_event('trial_start', sprintf('trial-%d',itrial), tmp_time_sec, evt_);
@@ -431,7 +438,7 @@ switch op.task
                 save(paths.trig_events_tab_fname, 'tblEvt');
             else
                 % Zy addition, added t_trial_start to mark the programmatic start of trial, this is more relevant for (pre-)processing rather than task-alignment
-                trials.t_trial_start(itrial) = ManageTime('current', CLOCK);
+                trials.t_trial_start(itrial) = ManageTime('current', CLOCKp);
                 log_event('trial_start', sprintf('trial-%d',itrial)); % log the trial start event with the current time in datenum format for easier syncing with beacon times
             end
             %% <<<
@@ -448,7 +455,7 @@ switch op.task
                 set(annoStr.Plus, 'color', 'w'); % turn cross white while playing audio stim; indicate to not speak during stim
             end
             drawnow;
-            %trials.t_stim_vis_on(itrial) = ManageTime('current', CLOCK);
+            %trials.t_stim_vis_on(itrial) = ManageTime('current', CLOCKp);
             [trials.t_stim_vis_on(itrial),~] = log_event('stim_vis_on', sprintf('trial-%d',itrial));
             %trials.dn_stim_vis_on(itrial) = now(); % for external syncing with beacon times
            
@@ -458,7 +465,7 @@ switch op.task
              % %  ..... this is generally a 20ms difference (likely due to the size of the audio chunk being written)
             %  % ..... commnent in the tt and ii lines to test this, and compare to trials.t_stim_on(itrial)
              % % (running on stryx laptop)
-            %trials.t_stim_aud_on(itrial) = ManageTime('current', CLOCK);
+            %trials.t_stim_aud_on(itrial) = ManageTime('current', CLOCKp);
             [trials.t_stim_aud_on(itrial),~] = log_event('stim_aud_on', sprintf('trial-%d',itrial));
             % ii = 0; 
             while ~isDone(stimread); 
@@ -466,7 +473,7 @@ switch op.task
                 headwrite(sound);
                 % ii=ii+1;
                 % if ii==1
-                    % tt(ii) = ManageTime('current', CLOCK); 
+                    % tt(ii) = ManageTime('current', CLOCKp); 
                 % end
             end;
             release(stimread);
@@ -485,13 +492,13 @@ switch op.task
             %
             % wait for a fixed time after visual onset, then switch back to fixation cross
             TIME_VIS_STIM_OFF = trials.t_stim_vis_on(itrial) + op.vis_stim_dur; 
-            ManageTime('wait', CLOCK, TIME_VIS_STIM_OFF);
+            ManageTime('wait', CLOCKp, TIME_VIS_STIM_OFF);
             if strcmp(op.visual, 'orthography')
                 set(annoStr.Stim, 'Visible','off');
                 set(annoStr.Plus, 'color',[1 1 1]);
                 set(annoStr.Plus, 'Visible','on');
                 drawnow;
-                %trials.t_stim_vis_off(itrial) = ManageTime('current', CLOCK);
+                %trials.t_stim_vis_off(itrial) = ManageTime('current', CLOCKp);
                 [trials.t_stim_vis_off(itrial),~] = log_event('stim_vis_off', sprintf('trial-%d',itrial));
             end
         
@@ -499,13 +506,13 @@ switch op.task
             % .... do not base off of audio offset, because this varies depending on the number of syllables in multisyl
             trials.go_delay(itrial) = min(op.vis_offset_to_go) + rand*diff(op.vis_offset_to_go); % get jittered time between stim offset and go cue
             TIME_GOSIGNAL_START = trials.t_stim_vis_off(itrial)  + trials.go_delay(itrial);          % GO signal target time
-            ok=ManageTime('wait', CLOCK, TIME_GOSIGNAL_START);     % waits for GO signal time
+            ok=ManageTime('wait', CLOCKp, TIME_GOSIGNAL_START);     % waits for GO signal time
         
         
             %%% AM note 2026/2/15: if time is measured before or after playing the go beep, there is 5-25ms difference (running on stryx laptop)
             %     this may be because it reads in the beep as a whole chunk 
             [trials.t_go_aud_on(itrial),trials.dn_go_aud_on(itrial)] = log_event('go_aud_on', sprintf('trial-%d',itrial));
-            %trials.t_go_aud_on(itrial) = ManageTime('current', CLOCK); 
+            %trials.t_go_aud_on(itrial) = ManageTime('current', CLOCKp); 
             %trials.dn_go_aud_on(itrial) = now(); % for external syncing with beacon times (~usec delay)
             %tic0=tic;
             while ~isDone(beepread); 
@@ -522,7 +529,7 @@ switch op.task
                             'Interval',0.006,'Dur',0.005,'Rep',1,'StartDelay',0,...
                             'verbose',0,'debug_timer',0); 
                         % I am opting to not use the time obtained outside of the send_event function as this may delayed from evt_, around 0.2sec. we might as
-                        tmp_time_sec = (evt_-CLOCK_dn)*86400; % convert to seconds
+                        tmp_time_sec = (evt_-CLOCKp_dn)*86400; % convert to seconds
                         log_event('go_aud_on_sync', sprintf('debug:trial-%d',itrial), tmp_time_sec, evt_);
                         %
                     end
@@ -548,14 +555,14 @@ switch op.task
         
             % show green cross ASAP after starting to play GO beep
             set(annoStr.Plus, 'color','g');
-            %trials.t_go_vis_on(itrial) = ManageTime('current', CLOCK); 
+            %trials.t_go_vis_on(itrial) = ManageTime('current', CLOCKp); 
             [trials.t_go_vis_on(itrial),~] =log_event('go_vis_on', sprintf('trial-%d',itrial));
             
             % ZY changed this logic so wait is finished in the current trial
             TIME_DEALY_COMPLETE = trials.t_go_vis_on(itrial) + op.gobeep_to_next_trial; 
             TIME_STIM_START = TIME_DEALY_COMPLETE;
-            ManageTime('wait', CLOCK, TIME_DEALY_COMPLETE);     % wait for fixed
-            %trials.t_trial_complete(itrial) = ManageTime('current', CLOCK);
+            ManageTime('wait', CLOCKp, TIME_DEALY_COMPLETE);     % wait for fixed
+            %trials.t_trial_complete(itrial) = ManageTime('current', CLOCKp);
             [trials.t_trial_complete(itrial),~] = log_event('trial_complete', sprintf('trial-%d',itrial));
             %{ 
             % set the target start time for the start of the next trial's onset time
@@ -615,7 +622,7 @@ if op.is_dbs_run
     %
     for ii=1:length(beacon_times_new)
         dn_ = beacon_times_new(ii);
-        add_event(paths.event_log_fname, [], 'pcp_sync', 'post-run', (dn_-CLOCK_dn)*86400, dn_); % log the new beacon times as user-triggered events in the event log; this is important for verifying that these sync pulses are captured in the data and aligned properly with the trial events
+        add_event(paths.event_log_fname, [], 'pcp_sync', 'post-run', (dn_-CLOCKp_dn)*86400, dn_); % log the new beacon times as user-triggered events in the event log; this is important for verifying that these sync pulses are captured in the data and aligned properly with the trial events
     end
 end
 
