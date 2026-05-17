@@ -121,8 +121,8 @@ for i_syncrow = 1:n_syncrows
     for ichan = 1:length(op.channels_to_cut)
         
         % make trial audio directories
-        cutchan = op.channels_to_cut{ichan}; 
-        paths.trial_audio_task_chan = [paths.trial_audio, filesep, 'ses-',op.ses, '_task-',op.task,'_run-',num2str(op.run),'_',cutchan]; % trial audio clips for this run and this recording chan
+        chan = op.channels_to_cut{ichan}; 
+        paths.trial_audio_task_chan = [paths.trial_audio, filesep, 'ses-',op.ses, '_task-',op.task,'_run-',num2str(op.run),'_',chan]; % trial audio clips for this run and this recording chan
         if ~exist(paths.trial_audio, 'dir'); system(['mkdir ' paths.trial_audio]); end
         if ~exist(paths.trial_audio_task_chan, 'dir'); system(['mkdir ' paths.trial_audio_task_chan]); end
         
@@ -132,9 +132,9 @@ for i_syncrow = 1:n_syncrows
         
         % load full run audio
         if  ismember('step', sync.Properties.VariableNames)  && iscell(sync.step)  % in subject sml001, we didn't add 'step' to sourcedata filenames
-            audiofile_full_run = [paths.src_audvid, filesep, paths.filestr_step,'recording-', cutchan, '.wav']; 
+            audiofile_full_run = [paths.src_audvid, filesep, paths.filestr_step,'recording-', chan, '.wav']; 
         else 
-            audiofile_full_run = [paths.src_audvid, filesep, paths.filestr,'recording-', cutchan, '.wav']; 
+            audiofile_full_run = [paths.src_audvid, filesep, paths.filestr,'recording-', chan, '.wav']; 
         end
 
         [run_aud, fs] = audioread(audiofile_full_run); 
@@ -145,7 +145,7 @@ for i_syncrow = 1:n_syncrows
         for itrial = 1:ntrials
 
             if ~isnan(audiofiles_this_channel.starts(itrial)) % if trial table has timepoints for this trial... nan here usually indicates the run was ended before this trial
-                audiofiles_this_channel.filename{itrial} = ['trial-', num2str(itrial), '_', cutchan '_', trials.name{itrial}, '.wav'];
+                audiofiles_this_channel.filename{itrial} = ['trial-', num2str(itrial), '_', chan '_', trials.name{itrial}, '.wav'];
             
                 % Convert times to sample indices
                 startSample = max(1, round(audiofiles_this_channel.starts(itrial) * fs_adj));
@@ -165,7 +165,7 @@ for i_syncrow = 1:n_syncrows
 
         end
     
-        audiofiles_table_filename = [paths.trial_audio,filesep, paths.filestr, 'audiofiles-',cutchan, '.tsv']; 
+        audiofiles_table_filename = [paths.trial_audio,filesep, paths.filestr, 'audiofiles-',chan, '.tsv']; 
         audiofiles_this_channel = renamevars(audiofiles_this_channel,{'starts','ends','duration'},...
                             {'audfile_start','audfile_end','audfile_dur'}); 
         writetable(audiofiles_this_channel, audiofiles_table_filename, 'FileType','text','Delimiter','tab');
