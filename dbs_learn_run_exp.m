@@ -262,6 +262,7 @@ set(annoStr.Plus, 'Visible','on');
 
 % set up trial (see subfunction at end of script)
 CLOCK = ManageTime('start');                        % resets clock to t=0 (first-trial start-time)
+CLOCK_dn = now();
 TIME_STIM_START = 0;
 
 
@@ -395,12 +396,18 @@ switch op.task
                     'Interval',0.006,'Dur',0.005,'Rep',1,'StartDelay',0,...
                     'verbose',0,'debug_timer',0); 
                 %fprintf("send_event duration: %.3f seconds\n", toc(tic1))
-                tmp_managed_time = ManageTime('current', CLOCK);
+                % tmp_managed_time = ManageTime('current', CLOCK);
                 %t1=toc(tic1)
                 evt = cat(1,evt,evt_); evtCode = cat(1,evtCode,evtCode_);
                 trials.dn_sync_event_on(itrial) = evt_; % overwrite this with the more accurate time from send_event
+                % I am opting to not use the time obtained outside of the send_event function as this may delayed from evt_, around 0.2sec. we might as
+                tmp_time_sec = (evt_-CLOCK_dn)*86400; % convert to seconds
+                trials.t_sync_event_on(itrial) = tmp_time_sec; % overwrite this with the more accurate time from send_event
+                trials.t_trial_start(itrial) = tmp_time_sec; 
+                %{
                 trials.t_sync_event_on(itrial) = tmp_managed_time;
                 trials.t_trial_start(itrial) = tmp_managed_time; % overwrite this with the more accurate time from send_event
+                %}
 
                 % ## Ideally, we should move the following to the end of trial ##
                 tblEvt = table(evt,evtCode,'VariableNames',{'EventTime_dn','EventCode'});
