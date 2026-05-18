@@ -75,7 +75,7 @@ if exist('op','var')
             paths.src_runs_table = [paths.src_ses, filesep, 'sub-',op.sub,'_ses-',op.ses, '_runs.tsv']; 
             paths.sync_ses = [paths.annot, filesep, 'sub-',op.sub, '_ses-',op.ses, 'sync.tsv']; 
             if isfield(op,'task')
-                paths.beh_annot_table = [paths.trial_audio, filesep, [paths.annot, filesep, 'sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_beh-annot.tsv']]; % manual behavior annotation
+                paths.beh_annot_table = [paths.trial_audio, filesep, ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_beh-annot.tsv']]; % manual behavior annotation
                 if isfield(op,'run')
 
                     %%%% the following string gets used in a variety of files associated with this run

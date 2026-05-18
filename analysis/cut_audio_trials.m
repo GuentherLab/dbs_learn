@@ -14,7 +14,7 @@ field_default('op','sub','sml003');
 % field_default('op','ses','multisyl');
     field_default('op','ses','subsyl');
 
-    field_default('op','postproc_gain',1);
+    field_default('op','postproc_gain',10);
 
 field_default('op','channels_to_cut',{'mic','headphone'});
 
@@ -48,10 +48,10 @@ sync = readtable(paths.landmarks_file, 'FileType','text','Delimiter','tab');
 switch op.ses
     case 'subsyl'
         tasks = {'famil';'pretest';'trainA';'trainB';'test1';'test2'}; 
-        trialvars_to_copy = {'stim_group','is_native','name'}; % add these to audiofiles table
+        trialvars_to_copy = {'trialnum','stim_group','is_native','name'}; % add these to audiofiles table
     case 'multisyl'
         tasks = {'fds';'famil';'assess';'pretest';'trainA';'trainB';'test1';'test2'}; 
-        trialvars_to_copy = {'stim_group','name','n_syllables'}; % add these to audiofiles table
+        trialvars_to_copy = {'trialnum','stim_group','name','n_syllables'}; % add these to audiofiles table
     otherwise 
         error('session not recognized')
 end
@@ -100,6 +100,12 @@ for i_syncrow = 1:n_syncrows
     ntrials = height(trials);
     cellcol = cell(ntrials,1);
     nancol = NaN(ntrials,1);
+
+    % early subjects may not have had 'trialnum' as a variable - add it
+    if ~any(contains(trials.Properties.VariableNames,'trialnum'))
+        trials.trialnum = [1:ntrials]';
+        trials = movevars(trials,'trialnum','Before',1)
+    end
 
 
     % make table listing trialwise audio files
