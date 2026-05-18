@@ -522,3 +522,150 @@ function s = serializeNtEpochs(mat)
                      1:size(mat,2), 'UniformOutput', false);
     s = strjoin(pairs, ';');
 end
+
+
+
+
+
+%% created w/ Claude using the following prompts: 
+% request 2: 
+% here's my modified script. make the following updates: 
+% -don't try to look for textgrids for files that have nan for audfile_start in the table [there is no actual audiofile for these, so it couldn't have gotten scored]
+% -change unusable_trial from being a logical to being a double; it should start as nan, and only become 0 or 1 if a data from texgrid was imported for it [if it was actually scored]
+% -instead of adding info from the textgrids to the trial table file that was loaded as the variable 'audiofiles', copy 'audiofiles' into a new table variable 'trials' and add all of the textgrid info to that
+% -in the trials table, order the variables as follows: trialnum, stim_group, is_native, name, [then all of the variables we added from the textgrids], [then all of the remaining variables that were there]
+% -also remove the following variables from trials table if they are present: postproc_gain, adjust_start, adjust_end
+% -suppress the following warning, which is happening for about half of the textgrids [probably due to ipa fonts]: "Warning: The encoding 'UTF-16' is not supported. For a list of supported encodings, see the FOPEN documentation. > In tgRead (line 28)" 
+% -for the tier consistency checks, output an error, not just a warning, to force the user to address the problem and run the script again. however before sending the error, say that you are opening it in praat, then open both the textgrid and the wav in praat so the user can immediately look at the problematic trial. the wav will be the same as the textgrid, just with .wav extension
+% 
+% 
+% request 1: 
+% I have speech trials which have been scored in praat with particular tiers. I have the matlab mpraat toolbox, which can load praat data into matlab. I have provided the praat script used to score the files and generate the textgrids [dbs_learn_annotation, normally would have .praat extension], an example of the trials file [normally would have .tsv extension], and and example of textgrid for a specific trial that has been manually scored [normally would have .textgrid extension].  I want the matlab script to do the following:
+% -load a .tsv table file which has a column 'filename' - this has a row for each trial of the experiment
+% -look in a particular directory 'trialauddir' for .textgrid files  - one for each trial in the experiemtn
+% -use a for loop to look at each trial listed in the table, then find the corresponding textgrid
+% -check that it has the same stim in the filename as is expected in the trial table
+% -run through each of the tiers in the textgrid; for each tier that has data, add that data to the trial table in the appropriate row and column
+% -the tiers should be inputted to hte table as follows (if they are not empty for this trial) - if the data in the praat tier is not this type, give a message about it and throw an error:
+% ---cons accuracy: 0, 1, or 2
+% ---vowel acc: 0 or 1 
+% ---error type: in the praat tier, a list of numbers from [1 3 4 5 6 7 8], repeats ok; the table variable should be a cell array containing an row vector for each trial
+% ---transcript, disfluency, comments - string
+% ---unusable trial, difficult to score - 0 or 1 - add to table as logical
+% ---speech epoch, vowel epoch - two timepoints
+% ---non-target sounds epoch: pairs of timepoints. assume that they are a sequence, where the odd times are onsets of an epoch and the following time is the offset of that epoch. cell array. within the cell for each trial [if it's not empty], there should be a 2 x n-epochs vector, with each row containing the onset and offset of that epoch
+% -do some logical consistency checks
+% 
+% Consistency checks: 
+% -if they didn't get maximum points for one of the clusters, the error type for that cluster must not be empty
+% ----more specifically: if the cluster only got 1 point, there must be at least 1 error that is not a 7 or 8 [error types 7 and 8 don't deduct accuracy points]
+% ---if the cluster got zero accuracy points, it must either have an error type 3, error type 5, or more than one error type [aside from types 7 and 8]
+% -if there are any errors list for clust1, vowel, or clust2, transcript must not be empty
+% -unless 'unusable trial' is true, the following tiers must not be empty: accuracy tiers, speech epoch, vowel epoch
+% -if unusable trial is true, then comments must not be empty
+% -vowel timepoints must both be between the speech timepoints
+% -all of the non-target-sounds epochs are entirely non-overlapping with the speech epoch
+% 
+% 
+% Here is the text description of how the tiers were filled in when the trial audio files were scored via the praat script, generating the textgrids: 
+% ------------- Praat Annotation Tiers ------------- 
+% 
+% Tier 1 and 4 – Consonant Cluster Accuracy 
+% 
+% Tier 1 and 5 score the accuracy of the CC consonant cluster. Tier 1 is onset cluster Tier 5 is offset cluster. Epenthesis/prothesis should NOT be considered an error for the purposes of this point system but should be indicated in the following error classification. Each cluster should be scored as follows 
+% 
+% 2 points: accurate production of both consonants.... ignore voicing when scoring accuracy 
+% 
+% 1 point: production of 2 consonants, where at least 1 consonant shares place of articulation with its target 
+% 
+% 0 points: other 
+% 
+% 
+% 
+% Tier 2 and 5 – Consonant Cluster Error Types 
+% 
+% If there were errors or epenthesis/prothesis in the consonant clusters, these tiers indicate the type of error. Tier 2 is onset cluster Tier 6 is offset cluster. Indicate error/epenthesis with the following classification system:  
+% 
+% 1 - disfluency – typical disfluency (TD) or stuttering-like disfluency (SLD) 
+% 
+% 3 - phoneme deletion/omission.... a final stop consonant in the 2nd cluster should generally be considered omitted if you don't hear a release 
+% 
+% 4 - phoneme insertion (consonants only; enter vowel insertions as epenthesis/prothesis) 
+% 
+% 5 - substitution 
+% 
+% 6 - incorrect ordering/sequencing of phonemes, transposition error 
+% 
+% 7 - vocoid epenthesis (using Wilson 2014 ['Data Analysis' paragraph 2] criteria), where periodic peaks, a visible second (or higher) formant in spectrogram, and drop in intensity prior to second consonant required for scoring of epenthesis)  
+% 
+% 8 - vocoid prothesis - insertion of vowel-like sound before consonant onset; Wilson 2014 criteria is "vocoid with visible first and second formants before the obstruent" 
+% 
+% 
+% 
+% Score epenthesis using the Wilson 2014 criteria, where periodic peaks, a visible second (or higher) formant in spectrogram, and drop in intensity prior to second consonant required for scoring of epenthesis. Errors include: disfluencies (restart or omission), unrecognizable from target, phoneme omission, consonant addition, phoneme substitution, incorrect sequencing of phonemes (transposition), and vocoid epenthesis, prothesis. 
+% 
+% 
+% 
+% Tier 3 – Vowel Accuracy 
+% 
+% Tier 3 scores accuracy of the CC consonant cluster. The vowel should be scored as follows 
+% 
+% 1 point: vowel production that resembles the target, considering the subject's accent 
+% 
+% 0 points: vowel production that sounds like it is intended to be a different vowel from the target. In general, this should be either: 
+% 
+% Vowel that is pronounced as a distinct vowel from how the subject usually produces the vowel in this syllable, e.g. usually they produce /i/ when attempting this target, but in a few cases they produce /ɛ/ 
+% 
+% Vowel that sounds like the vowel from a different syllable, especially if they seem to be carrying the vowel over from that syllable, e.g. trial 25 has the vowel /ɛ/, and they produce the vowel /ɛ/ in trial 26 despite the trial 26 vowel being /o/ 
+% 
+% 
+% 
+% Tier – Transcript 
+% 
+% For trials that you did not award full accuracy points to, provide a transcript (loose transcript or IPA) of the utterance. It may also be useful to transcribe trials that were given full accuracy points, but had some variation from typical productions, such as slight difference in vowel identity.  
+% 
+% 
+% 
+% Tier – Disfluency 
+% 
+% In this tier, describe any disfluency produced (which should be indicated  in the Consonat Cluster Error Type tiers. These include Typical Disfluencies (revisions, whole-"word" repetitions) and stuttering-like repetitions (sub-syllabic repetitions, prolongations, blocks). Blocks may be difficult to detect from audio alone, but indicate when you believe they are occurring.  
+% 
+% 
+% 
+% Tier - Comments 
+% 
+% Record any other unusual occurrences that should be noted, such as external noises, responding before the beep, breathy/quiet/hoarse voice, slurring, dysarthria....  
+% 
+% 
+% 
+% Tier - Unusable Trial 
+% 
+% If a trial does not contain an utterance or the audio quality/background noise makes it impossible to score the utterance, mark this tier with a 1. Also mark this tier with a 1 if the subject started but did not finish attempting to complete the utterance, which may occur due to drowsiness from intraoperative anesthesia. Do not mark this tier with a 1 if you judge that the subject completed their attempt at the utterance, but dropped phonemes from the end due to a speech error; in this case, mark the error in the preceding tiers. Trials marked as unusable in this tier do not need to be scored in any other tiers. These trials will not be counted as accurate or inaccurate and will be excluded from all further analysis.  
+% 
+% 
+% 
+% Tier - Difficult To Score 
+% 
+% Mark this tier as a 1 if you had a hard time deciding whether to mark this trial as an error or not, due to background noise or ambiguity of the utterance. Leave this tier empty if the trial was not difficult to score. In Tier 4 (Comments), describe why the trial was difficult to score (e.g. "hard to tell if the first consonant was ʃ or S"). The purpose of this tier is to mark trials which should be reviewed later, after either cleaning the audio or getting a second opinion about how to score them. After these ambiguous trials are resolved, it may be helpful to go back and change corresponding scores in this tier from 1 to 0. 
+% 
+% 
+% 
+% Tier - Speech Epoch 
+% 
+% Mark the overall onset and offset of syllable production. If there is speech produced that does not seem to be an attempt at the syllable,  put a 1 in 'Difficult to Score', note this in Comments, and do not include the extra speech in this tier. 
+% 
+% 
+% 
+% Tier - Vowel Epoch 
+% 
+% Mark the onset and offset of the vowel. Mark based on your perception of the vowel, while consulting the spectrogram.  
+% 
+% 
+% 
+% Tier – Non-Target Sounds Epoch 
+% 
+% Mark the onset and offset of any voice/articulator sounds make by the subject OUTSIDE of the speech window that are not an attempt at the target syllable. There should always be an even number of timepoints in this tier, to indicate sound onset/offset pairs. This includes: 
+% 
+% Pre-voicing before the first consonant onset 
+% 
+% Extraneous vocalizations and articulator sounds (including lip smacking, audible breathing) outside of the speech epoch
