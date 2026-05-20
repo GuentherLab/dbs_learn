@@ -301,8 +301,8 @@ if ~isempty(paths.beh_annot_table)
                                        'UniformOutput', false);
     Texport.nontarget_sounds_epoch = cellfun(@serializeNtEpochs, ...
         trials.nontarget_sounds_epoch, 'UniformOutput', false);
-    writetable(Texport, paths.beh_annot_table, 'Delimiter', '\t', 'FileType', 'text');
-    fprintf('Textgrid scoring compiled into table file: %s\n', paths.beh_annot_table);
+    writetable(Texport, paths.beh_annot_table);
+    fprintf('Textgrid scoring compiled into table file: \n        %s\n', paths.beh_annot_table);
 end
 
 

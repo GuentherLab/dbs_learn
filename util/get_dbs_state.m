@@ -5,10 +5,16 @@
 function dbs_state = get_dbs_state(op)
 
 paths = setpaths_dbs_learn(op);
-subs = readtable(paths.subject_list_master);
+subs = readtable(paths.subject_list_master,'VariableNamingRule', 'preserve');
 subs.Properties.RowNames = subs.sub; 
 cohort = subs{op.sub,['cohort_',op.ses]}{1};
 
 cohort_dbs_states = readtable(paths.cohort_dbs_states, 'FileType','text','Delimiter','tab'); 
 cohort_dbs_states.Properties.RowNames = cohort_dbs_states.task; 
-dbs_state = cohort_dbs_states{op.task,['cohort_',cohort]}{1}; 
+
+% if the input isn't a listed task [e.g. if it's a trial condition like 'novel1_nn'], give empty output
+if ~any(op.task == string(cohort_dbs_states.task))
+    dbs_state = ''; 
+elseif any(op.task == string(cohort_dbs_states.task))
+    dbs_state = cohort_dbs_states{op.task,['cohort_',cohort]}{1}; 
+end
