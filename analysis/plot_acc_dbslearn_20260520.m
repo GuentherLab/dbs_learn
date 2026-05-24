@@ -158,7 +158,7 @@ box off
 % scored by Logan
 op.sub = 'sml003';
 op.ses = 'subsyl';
-op.task = 'test1';
+op.task = 'test2';
 
 frac_trials_to_plot = .5;
 
@@ -166,19 +166,18 @@ paths = setpaths_dbs_learn(op);
 
 subs = readtable(paths.subject_list_master,'VariableNamingRule', 'preserve'); subinfo = subs(op.sub==string(subs.sub), :); 
 
-close all hidden
+% close all hidden
 hfig  = figure('Color','w'); 
 
-close all
-hfig = figure;
-
-subplot(2,2,1)
+% subplot(2,2,1)
 trials = readtable(paths.beh_annot_table); 
 trials.stim_group = strrep(strrep(trials.stim_group,'novel1','novel'),'novel2','novel');
 trials = trials(1:round(frac_trials_to_plot*height(trials)),:);
 trials.acc = [trials.cons1_accuracy + trials.cons2_accuracy] / 4; 
+trials.speech_dur = trials.speech_offset - trials.speech_onset;
+trials.vowel_dur = trials.vowel_offset - trials.vowel_onset; 
 cond_order = {'novel_nat','trainA','trainB','novel_nn'}; 
-g = grpstats(trials,"stim_group","mean","DataVars",["acc"]);
+g = grpstats(trials,"stim_group","mean","DataVars",["acc","speech_dur","vowel_dur"]);
 g = g(cond_order,:); 
 nconds = height(g);
 
@@ -195,7 +194,7 @@ for icond = 1:nconds
 end
 
 % close all
-% hfig = figure; 
+hfig = figure; 
 hbar = bar(g.mean_acc);
 hax = gca;
 
@@ -207,7 +206,99 @@ hax.XTickLabels = g.xlab;
 ylim([0 1])
 box off
 
+%%%% vowel duration
+hfig = figure; 
+hbar = bar(g.mean_vowel_dur);
+hax = gca;
 
+
+ylabel({'vowel duration'})
+title({[op.ses, ' vowel duration during ', op.task, ' DBS-', upper(get_dbs_state(op)), ' - subject ', op.sub, ' (',upper(subinfo.dx{1}),')'],...
+    ['first ', num2str(100*frac_trials_to_plot), 'pct of trials']})
+hax.XTickLabels = g.xlab;
+ylim([0 0.25])
+
+%%%%%% speech duration
+hfig = figure; 
+hbar = bar(g.mean_speech_dur);
+hax = gca;
+
+
+ylabel({'syllable duration'})
+title({[op.ses, ' syllable duration during ', op.task, ' DBS-', upper(get_dbs_state(op)), ' - subject ', op.sub, ' (',upper(subinfo.dx{1}),')'],...
+    ['first ', num2str(100*frac_trials_to_plot), 'pct of trials']})
+hax.XTickLabels = g.xlab;
+box off
+
+
+%% plot train and test timecourses
+% sml003 subsyl
+op.sub = 'sml003';
+op.ses = 'subsyl'; 
+
+
+tasks = {'test1','test2'};
+ntasks = length(tasks);
+
+op.frac_trials_to_plot = 1; 
+
+paths = setpaths_dbs_learn(op);
+runs = readtable(paths.src_runs_table,'FileType','text','Delimiter','tab');
+
+close all
+hfig = figure('Color','w'); 
+
+for itask = 1:ntasks
+    op.task = tasks{itask};
+    op.run = runs.run(strcmp(runs.task,op.task));
+    paths = setpaths_dbs_learn(op); % get run-specific info
+
+    if any(strcmp(op.task, {'trainA','trainB'}))
+
+        op.sortvar = 'name'; 
+    elseif any(strcmp(op.task, {'test1','test2'}))
+        op.sortvar = 'stim_group';
+    end
+
+    op.newfig = 0; 
+    subplot(2,2,itask)
+    trials = readtable(paths.beh_annot_table); 
+    trials.stim_group = strrep(strrep(trials.stim_group,'novel1','novel'),'novel2','novel');
+    trials = trials(1:round(frac_trials_to_plot*height(trials)),:);
+    trials.trial_accuracy = [trials.cons1_accuracy + trials.cons2_accuracy] / 4; 
+
+    op.intable = trials;
+    op.plotvar = 'trial_accuracy';
+    g = plot_windowed_timecourse(op); 
+
+    hlgd = findobj(gcf, 'Type', 'Legend');
+
+    cond_order = {'novel_nat','trainA','trainB','novel_nn'}; 
+    g = g(cond_order,:); 
+    nconds = height(g);
+
+    % look up the DBS state that each condition was learned in [not the state it's being tested in]
+    for icond = 1:nconds
+        thiscond = g.stim_group{icond};
+        cfg = [];    cfg.sub = op.sub;    cfg.ses = op.ses;     cfg.task = thiscond; 
+        g.dbs_state_learn{icond} = get_dbs_state(cfg);
+        if ~isempty(g.dbs_state_learn{icond})
+            g.xlab{icond} = [g.stim_group{icond}, '_DBS-', upper(g.dbs_state_learn{icond})];
+        else
+            g.xlab{icond} = g.stim_group{icond}; 
+        end
+    end
+
+    hlgd(1).String = g.xlab; 
+
+
+
+    dbs_state = get_dbs_state(op); 
+    % title([op.task,'_dbs-',dbs_state],'Color','k')
+
+    htitle = title({[op.ses, ' accuracy during ', op.task, ' DBS-', upper(get_dbs_state(op)), ' - subject ', op.sub]}, 'Color','k')
+
+end
 
 %%
 

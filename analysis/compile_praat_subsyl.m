@@ -12,7 +12,7 @@ vardefault('op',struct);
 op.ses = 'subsyl';
 
 field_default('op','sub','sml003');
-field_default('op','task','test1');
+field_default('op','task','test2');
 field_default('op','chan','headphone');
 
 paths = setpaths_dbs_learn(op);
