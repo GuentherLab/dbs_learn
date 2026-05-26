@@ -2,6 +2,10 @@
 
 function [paths, compname] = setpaths_dbs_learn(op,paths)
 
+% set general preferences for text display (show underscores) 
+set(0, 'DefaultTextInterpreter', 'none')
+set(0, 'DefaultAxesTickLabelInterpreter', 'none')
+
 % if a paths variable wasn't provided, create a new one
 if ~exist('paths','var')
     paths = struct; 
@@ -46,6 +50,7 @@ paths.cohort_dbs_states = [paths.data_remote, filesep, 'cohort_dbs_states.tsv'];
      [paths.code_analysis];...
      [paths.annot];...
      [paths.code_dbs_learn, filesep, 'util'];...
+    [paths.code_dbs_learn, filesep, 'mPraat-master'];... % mPraat toolbox for interacting with Praat files
     [paths.stim];...
     paths.spm;... %%%% use version of spm in fieldtrip
     paths.fieldtrip_toolbox;...
@@ -74,6 +79,8 @@ if exist('op','var')
             paths.src_runs_table = [paths.src_ses, filesep, 'sub-',op.sub,'_ses-',op.ses, '_runs.tsv']; 
             paths.sync_ses = [paths.annot, filesep, 'sub-',op.sub, '_ses-',op.ses, 'sync.tsv']; 
             if isfield(op,'task')
+                % manual behavior annotation - use xlsx for phonetic fonts etc
+                paths.beh_annot_table = [paths.trial_audio, filesep, ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_beh-annot.xlsx']];
                 if isfield(op,'run')
 
                     %%%% the following string gets used in a variety of files associated with this run

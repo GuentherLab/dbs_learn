@@ -6,7 +6,7 @@
 function create_sync_landmark_tables(op)
 
 vardefault('op',struct);
-field_default('op','sub','sml003');
+field_default('op','sub','sml004');
 
 field_default('op','ses','subsyl');
     % field_default('op','ses','multisyl');
