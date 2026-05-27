@@ -35,7 +35,7 @@ end
 vardefault('op',struct);
 field_default('op','sub','qqq'); 
 field_default('op','ses','multisyl'); % 'subsyl' or 'multisyl'
-field_default('op','task', 'pretest'); 
+field_default('op','task', 'test2'); 
 field_default('op','step', 'unknown'); 
 field_default('op','record_audio', 1); 
 field_default('op','require_keypress_every_trial',0); % if true, experimenter must press any key at end of trial to proceed to next trial
@@ -65,6 +65,8 @@ op.Timing.Clock_Reference_dn = CLOCKp_dn;
 %
 TIME_PREPARE = 0.5; % Waiting period before experiment begin (sec)
 runtimer = tic; % timer for elapsed time in this run
+%
+op.samples_per_frame = 128; % it was 2048;
 
 %%%% parameters for sync pulses sent to CED computer [set by Zeyang]
 op.pulse.interval = 0.4; 
@@ -182,15 +184,19 @@ if op.record_audio
 
 end
 
-sileread = dsp.AudioFileReader(fullfile(paths.stim, 'silent.wav'), 'SamplesPerFrame', 2048*1);
+sileread = dsp.AudioFileReader(fullfile(paths.stim, 'silent.wav'), 'SamplesPerFrame', op.samples_per_frame);
 
 % set up sound output players
 audiodevreset;
 [beep_wav, beep_fs] = audioread([paths.stim, filesep,'flvoice_run_beep.wav']);
 op.beep_dur = numel(beep_wav)/beep_fs;
 
-beepread = dsp.AudioFileReader([paths.stim, filesep,'flvoice_run_beep.wav'], 'SamplesPerFrame', 2048*1);
-headwrite = audioDeviceWriter('SampleRate',beepread.SampleRate,'Device',aud.device_out);
+beepread = dsp.AudioFileReader([paths.stim, filesep,'flvoice_run_beep.wav'], 'SamplesPerFrame', op.samples_per_frame);
+op.sound_driver = 'ASIO';
+if strcmpi(op.sound_driver,'ASIO') % hardcoded ZY
+    aud.device_out = 'Focusrite USB ASIO';
+end
+headwrite = audioDeviceWriter('Driver','ASIO','SampleRate',beepread.SampleRate,'Device',aud.device_out,'BufferSize',op.samples_per_frame);
 
 ok=ManageTime('wait', CLOCKp, TIME_PREPARE);
 set(annoStr.Stim, 'Visible','off');     % Turn off preparation page
@@ -253,7 +259,7 @@ figTC=taskControlGUI_inDev(taskState,op.pulse,paths.beacon_times_fname,beacon_ti
 % # Initialize EvtTime
 if FLAG_SEND_TASK_EVENT_TO_CED
     evt = []; evtCode = [];
-    paths.trig_events_tab_fname = [paths.beh, filesep, paths.filestr_step,'trig-events.mat']
+    paths.trig_events_tab_fname = [paths.beh, filesep, paths.filestr_step,'trig-events.mat'];
     % note all daqs have been cleared through clean_slate()
     % thi needs to verified to not cause floating digital outputs
     op.nidaq = [];
@@ -310,7 +316,7 @@ switch op.task
         
         [stim_audio.audio,stim_audio.fs]=cellfun(@audioread, stim_audio.filename,'uni',0);
         stim_audio.stimreads=cell(size(stim_audio.filename));
-        stim_audio.stimreads=cellfun(@(x)dsp.AudioFileReader(x, 'SamplesPerFrame', 2048*1),stim_audio.filename,'uni',0);
+        stim_audio.stimreads=cellfun(@(x)dsp.AudioFileReader(x, 'SamplesPerFrame', op.samples_per_frame),stim_audio.filename,'uni',0);
         
         stim_audio.dur=cellfun(@(a,b)numel(a)/b, stim_audio.audio, stim_audio.fs);
 
@@ -362,17 +368,22 @@ switch op.task
                     pause(0.2)
                     ud = get(figTC,'UserData'); taskState = ud.taskState;
                     %% saving updated beaconTimes
+                    %
                     if length(ud.beacon_times)>=length(beacon_times)
-                        beacon_times_new = setdiff(ud.beacon_times,beacon_times,"rows");
-                        beacon_times = ud.beacon_times;
-                        save(paths.beacon_times_fname,'beacon_times'); %%%% redundant - ok to delete
+                        beacon_times_new = setdiff(ud.beacon_times,beacon_times,"stable");
                         %
-                        for ii=1:length(beacon_times_new)
-                            dn_ = beacon_times_new(ii);
-                            log_event(paths.event_log_fname, 'pcp_sync', sprintf('trial-%d', itrial), (dn_-CLOCKp_dn)*86400, dn_); % log the new beacon times as user-triggered events in the event log; this is important for verifying that these sync pulses are captured in the data and aligned properly with the trial events
+                        if ~isempty(beacon_times_new)
+                            beacon_times = ud.beacon_times;
+                            save(paths.beacon_times_fname,'beacon_times'); %%%% redundant - ok to delete
+                            %
+                            for ii=1:length(beacon_times_new)
+                                dn_ = beacon_times_new(ii);
+                                log_event(paths.event_log_fname, 'pcp_sync', sprintf('trial-%d', itrial), (dn_-CLOCKp_dn)*86400, dn_); % log the new beacon times as user-triggered events in the event log; this is important for verifying that these sync pulses are captured in the data and aligned properly with the trial events
+                            end
                         end
                         %log_event('pcp_sync', 'during-pause', NaN, temp_beacon_times(ii));
                     end
+                    %}
                     %%
                     if taskState.stop_requested
                         fprintf('Task Stopped from TaskControl_Panel ...\n')
@@ -512,26 +523,10 @@ switch op.task
         
         
             %%% AM note 2026/2/15: if time is measured before or after playing the go beep, there is 5-25ms difference (running on stryx laptop)
-            %     this may be because it reads in the beep as a whole chunk 
-            %[trials.t_go_aud_on(itrial),trials.dn_go_aud_on(itrial)] = log_event('go_aud_on', sprintf('trial-%d',itrial));
-            %trials.t_go_aud_on(itrial) = ManageTime('current', CLOCKp); 
-            %trials.dn_go_aud_on(itrial) = now(); % for external syncing with beacon times (~usec delay)
-            %tic0=tic;
-            while ~isDone(beepread)
-                sound=beepread(); 
-                % testing should a long delay from this is pulse is sent to actuall sound plays
-                % headwrite took 10msec w/o parpool, 
-                headwrite(sound);
-            end
-            % [ZY notes] after extensive testing, it is clear to that after headwrite(sound) is run, there is a 200msec delay to sound be played
-            % therefore, we should at least put go_aud_on time to be after headwrite(sound)
-            hardcoded_delay = 0; % sec, expect to be 0.2 sec
-            evt_ = now()+hardcoded_delay/86400;
-            tmp_time_sec = (evt_-CLOCKp_dn)*86400; % convert to seconds
-                    log_event('go_aud_on_sync', sprintf('debug:trial-%d',itrial), tmp_time_sec, evt_);
-            [trials.t_go_aud_on(itrial),trials.dn_go_aud_on(itrial)] = log_event('go_aud_on', sprintf('trial-%d',itrial),tmp_time_sec,evt_);
+            %     this may be because it reads in the beep as a whole chunk
+            % [ZY note] 2026/05/27 this is now xx before beep onset
+            [trials.t_go_aud_on(itrial),trials.dn_go_aud_on(itrial)] = log_event('go_aud_on', sprintf('trial-%d',itrial));
             if debug_beep_timing
-                pause(hardcoded_delay)
                 if FLAG_SEND_TASK_EVENT_TO_CED
                     t1=now();
                     % code 3 => sending on DI port 3 of Dev 2
@@ -552,6 +547,26 @@ switch op.task
                     %fprintf('from end of send_event() to end of log_event() took %.f msec \n',(now()-evt_)*86400*1000)
                 end
             end
+            %trials.t_go_aud_on(itrial) = ManageTime('current', CLOCKp); 
+            %trials.dn_go_aud_on(itrial) = now(); % for external syncing with beacon times (~usec delay)
+            %tic0=tic;
+            while ~isDone(beepread)
+                sound=beepread(); 
+                % testing should a long delay from this is pulse is sent to actuall sound plays
+                % headwrite took 10msec w/o parpool, 
+                headwrite(sound);
+            end
+            % [ZY notes] after extensive testing, it is clear to that after headwrite(sound) is run, there is a 200msec delay to sound be played
+            % therefore, we should at least put go_aud_on time to be after headwrite(sound)
+            %{
+            hardcoded_delay = 0; % sec, expect to be 0.2 sec
+            %
+            evt_ = now()+hardcoded_delay/86400;
+            tmp_time_sec = (evt_-CLOCKp_dn)*86400; % convert to seconds
+                    log_event('go_aud_on_sync', sprintf('debug:trial-%d',itrial), tmp_time_sec, evt_);
+            [trials.t_go_aud_on(itrial),trials.dn_go_aud_on(itrial)] = log_event('go_aud_on', sprintf('trial-%d',itrial),tmp_time_sec,evt_);
+            %}
+            
             
             % resetting beep player
             %toc(tic0)*1000 % it will be about 200 msec when reaching here
