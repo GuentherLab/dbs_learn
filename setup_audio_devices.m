@@ -24,7 +24,7 @@ auddevs = audiodevinfo;
                 aud.device_in_2 = devs_in{find(contains(devs_in,'Analogue 3 + 4 '),1)}; 
 
                 % focusrite out-channel 1 sometimes gets renamed, but should also contain the string below
-                aud.device_out = devs_out{find(contains(devs_out,' Focusrite USB Audio)'),1)};
+                aud.device_out = devs_out{find(contains(devs_out,'(Focusrite USB Audio)'),1)};
 
                 % this part of the device name needs to get removed for audioDeviceWriter.... not sure why
                 aud.device_out = strrep(aud.device_out,' (Windows DirectSound)',''); 

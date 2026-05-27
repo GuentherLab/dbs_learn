@@ -34,8 +34,8 @@ end
 %% default parameters
 vardefault('op',struct);
 field_default('op','sub','qqq'); 
-field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
-field_default('op','task', 'famil'); 
+field_default('op','ses','multisyl'); % 'subsyl' or 'multisyl'
+field_default('op','task', 'pretest'); 
 field_default('op','step', 'unknown'); 
 field_default('op','record_audio', 1); 
 field_default('op','require_keypress_every_trial',0); % if true, experimenter must press any key at end of trial to proceed to next trial
@@ -54,7 +54,7 @@ field_default('op','task_sync_aligning_event','t_trial_start')
 field_default('op','task_sync_field_name','t_sync_event_on')
 
 % debugging controls
-debug_beep_timing = 1; % if 1, will send additional 1 pulse of taskSync just before beep to test timing of this event; this is used to verify that the timing of the event is accurate enough for our purposes (e.g. to align neural data to this event and interpret it as aligned to the beep/GO cue)
+debug_beep_timing = 0; % if 1, will send additional 1 pulse of taskSync just before beep to test timing of this event; this is used to verify that the timing of the event is accurate enough for our purposes (e.g. to align neural data to this event and interpret it as aligned to the beep/GO cue)
 
 % starting clock
 % ZY merged CLOCKp to be the sole clock for the experiment, rather than having a separate CLOCK and CLOCKp; this is to avoid confusion and potential errors from having multiple clocks; CLOCKp is now the main clock that we use for all timing in the experiment, including event logging and trial timing; it is started at the beginning of the experiment and serves as the reference for all subsequent time measurements
@@ -164,12 +164,14 @@ op.instructions = instruct_tab.instructions{rowmatch}; clear rowmatch instruct_t
 % modify the below function based on the task computer and audio devices you are using
 aud = setup_audio_devices(); 
 
+%op.record_audio=1; % DEBUG_delete
 if op.record_audio
     if ~exist(paths.src_audvid, 'dir')
         mkdir(paths.src_audvid) %%%% recording function fails if the dir doesn't already exist
     end
     paths.aud_record_filename_headphone = [paths.src_audvid, filesep, paths.filestr_step,'recording-mic.wav'];
-                                     
+    % explicitly start parpool and limit size
+    %parpool('local',maxNumCompThreads-2)
     aud_record_obj_1 = parfeval(@recordMonoDevice, 0, ...
        aud.device_in_1, paths.aud_record_filename_headphone);
     if isfield(aud,'device_in_2')
@@ -180,14 +182,14 @@ if op.record_audio
 
 end
 
-sileread = dsp.AudioFileReader(fullfile(paths.stim, 'silent.wav'), 'SamplesPerFrame', 2048);
+sileread = dsp.AudioFileReader(fullfile(paths.stim, 'silent.wav'), 'SamplesPerFrame', 2048*1);
 
 % set up sound output players
 audiodevreset;
 [beep_wav, beep_fs] = audioread([paths.stim, filesep,'flvoice_run_beep.wav']);
 op.beep_dur = numel(beep_wav)/beep_fs;
 
-beepread = dsp.AudioFileReader([paths.stim, filesep,'flvoice_run_beep.wav'], 'SamplesPerFrame', 2048);
+beepread = dsp.AudioFileReader([paths.stim, filesep,'flvoice_run_beep.wav'], 'SamplesPerFrame', 2048*1);
 headwrite = audioDeviceWriter('SampleRate',beepread.SampleRate,'Device',aud.device_out);
 
 ok=ManageTime('wait', CLOCKp, TIME_PREPARE);
@@ -217,7 +219,7 @@ if op.is_dbs_run
     fprintf([ 'Press any key to send pulses.... \n'])
 
     while repeat_beacon
-        temp_beacon_times = test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count);
+        temp_beacon_times = test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count,[],0);
         beacon_times = [beacon_times, temp_beacon_times];
         %beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
         save(paths.beacon_times_fname, 'beacon_times');
@@ -308,7 +310,7 @@ switch op.task
         
         [stim_audio.audio,stim_audio.fs]=cellfun(@audioread, stim_audio.filename,'uni',0);
         stim_audio.stimreads=cell(size(stim_audio.filename));
-        stim_audio.stimreads=cellfun(@(x)dsp.AudioFileReader(x, 'SamplesPerFrame', 2048),stim_audio.filename,'uni',0);
+        stim_audio.stimreads=cellfun(@(x)dsp.AudioFileReader(x, 'SamplesPerFrame', 2048*1),stim_audio.filename,'uni',0);
         
         stim_audio.dur=cellfun(@(a,b)numel(a)/b, stim_audio.audio, stim_audio.fs);
 
@@ -329,7 +331,7 @@ switch op.task
                     %beacon_times = []; 
                     %paths.beacon_times_fname = [paths.beh, filesep, paths.filestr_step,'beacon-times.mat'];
                     while repeat_beacon
-                        beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
+                        beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count,[],0)];
                         save(paths.beacon_times_fname, 'beacon_times');
                         writematrix(beacon_times,strrep(paths.beacon_times_fname,'.mat','.tsv'),'FileType','text','Delimiter','tab')
                         answer = questdlg('Repeat pulse or continue to next experimental block?','','Repeat pulse','Continue to next block','Repeat pulse');
@@ -511,36 +513,50 @@ switch op.task
         
             %%% AM note 2026/2/15: if time is measured before or after playing the go beep, there is 5-25ms difference (running on stryx laptop)
             %     this may be because it reads in the beep as a whole chunk 
-            [trials.t_go_aud_on(itrial),trials.dn_go_aud_on(itrial)] = log_event('go_aud_on', sprintf('trial-%d',itrial));
+            %[trials.t_go_aud_on(itrial),trials.dn_go_aud_on(itrial)] = log_event('go_aud_on', sprintf('trial-%d',itrial));
             %trials.t_go_aud_on(itrial) = ManageTime('current', CLOCKp); 
             %trials.dn_go_aud_on(itrial) = now(); % for external syncing with beacon times (~usec delay)
             %tic0=tic;
-            while ~isDone(beepread); 
-                sound=beepread();
-                if debug_beep_timing
-                    if FLAG_SEND_TASK_EVENT_TO_CED
-                        % code 3 => sending on DI port 3 of Dev 2
-                        %[evt_,evtCode_] = send_event([3],[],0.01,0.005,1,'Dev2',0); 
-                        % send event has 20msec overhead in addition to the pulse timecourse. this is longer when dio is not already initialized, likely due to initialization time.
-                        if isempty(op.nidaq.devObj_task)
-                            op.nidaq.devObj_task = connect_to_nidaq(op.nidaq.devID_task);
-                        end 
-                        [evt_,evtCode_] = send_event([3],'dio',op.nidaq.devObj_task,...
-                            'Interval',0.006,'Dur',0.005,'Rep',1,'StartDelay',0,...
-                            'verbose',0,'debug_timer',0); 
-                        % I am opting to not use the time obtained outside of the send_event function as this may delayed from evt_, around 0.2sec. we might as
-                        tmp_time_sec = (evt_-CLOCKp_dn)*86400; % convert to seconds
-                        log_event('go_aud_on_sync', sprintf('debug:trial-%d',itrial), tmp_time_sec, evt_);
-                        %
-                    end
-                end
+            while ~isDone(beepread)
+                sound=beepread(); 
+                % testing should a long delay from this is pulse is sent to actuall sound plays
+                % headwrite took 10msec w/o parpool, 
                 headwrite(sound);
             end
-            %t2=toc(tic0); fprintf('beep length %1.0f msec\n', t2*1000)
-            %
-
+            % [ZY notes] after extensive testing, it is clear to that after headwrite(sound) is run, there is a 200msec delay to sound be played
+            % therefore, we should at least put go_aud_on time to be after headwrite(sound)
+            hardcoded_delay = 0; % sec, expect to be 0.2 sec
+            evt_ = now()+hardcoded_delay/86400;
+            tmp_time_sec = (evt_-CLOCKp_dn)*86400; % convert to seconds
+                    log_event('go_aud_on_sync', sprintf('debug:trial-%d',itrial), tmp_time_sec, evt_);
+            [trials.t_go_aud_on(itrial),trials.dn_go_aud_on(itrial)] = log_event('go_aud_on', sprintf('trial-%d',itrial),tmp_time_sec,evt_);
+            if debug_beep_timing
+                pause(hardcoded_delay)
+                if FLAG_SEND_TASK_EVENT_TO_CED
+                    t1=now();
+                    % code 3 => sending on DI port 3 of Dev 2
+                    %[evt_,evtCode_] = send_event([3],[],0.01,0.005,1,'Dev2',0); 
+                    % send event has 20msec overhead in addition to the pulse timecourse. this is longer when dio is not already initialized, likely due to initialization time.
+                    if isempty(op.nidaq.devObj_task)
+                        op.nidaq.devObj_task = connect_to_nidaq(op.nidaq.devID_task);
+                    end 
+                    [evt_,evtCode_] = send_event([3],'dio',op.nidaq.devObj_task,...
+                        'Interval',0.006,'Dur',0.005,'Rep',1,'StartDelay',0,...
+                        'verbose',0,'debug_timer',0); 
+                    (evt_-t1)*86400*1000
+                    %fprintf('send_event() takes %.1f msec, now()-evt=%.1fmsec\n',toc(t2)*1000,(now()-evt_)*86400*1000)
+                    % I am opting to not use the time obtained outside of the send_event function as this may delayed from evt_, around 0.2sec. we might as
+                    tmp_time_sec = (evt_-CLOCKp_dn)*86400; % convert to seconds
+                    log_event('go_aud_on_sync', sprintf('debug:trial-%d',itrial), tmp_time_sec, evt_);
+                    %
+                    %fprintf('from end of send_event() to end of log_event() took %.f msec \n',(now()-evt_)*86400*1000)
+                end
+            end
+            
             % resetting beep player
+            %toc(tic0)*1000 % it will be about 200 msec when reaching here
             reset(beepread);reset(headwrite);
+            %toc(tic0)*1000
             %
             % assume beep-off time based on beep-on time and beep duration
             % ... this beep-off time is exactly as accurate as the beep-on measurement
@@ -616,7 +632,7 @@ fprintf(['\nTask ''',op.task, ''' in session ''', op.ses, ''' complete.... elaps
 if op.is_dbs_run
     fprintf('Press any key to send final sync pulses [if applicable] and end this experimental phase')
     pause()
-    beacon_times_new = test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count);
+    beacon_times_new = test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count,[],0);
     beacon_times = [beacon_times, beacon_times_new];
     save(paths.beacon_times_fname,'beacon_times');
     %
