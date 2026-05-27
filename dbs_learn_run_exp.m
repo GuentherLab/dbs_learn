@@ -34,8 +34,8 @@ end
 %% default parameters
 vardefault('op',struct);
 field_default('op','sub','qqq'); 
-field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
-field_default('op','task', 'famil'); 
+field_default('op','ses','multisyl'); % 'subsyl' or 'multisyl'
+field_default('op','task', 'test1'); 
 field_default('op','step', 'unknown'); 
 field_default('op','record_audio', 1); 
 field_default('op','require_keypress_every_trial',0); % if true, experimenter must press any key at end of trial to proceed to next trial
