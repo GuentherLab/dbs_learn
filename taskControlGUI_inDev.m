@@ -162,7 +162,7 @@ function figTC=taskControlGUI(taskState,pulseParam,beacon_times_filepath,beacon_
         set(btnSendPCPSync, 'BackgroundColor', [255, 222, 33]/255);
         drawnow; % Update the UI immediately
         % Simulate the sending process
-        beacon_times = [beacon_times, test_Beacon(pulseParam.interval,pulseParam.duration,pulseParam.count)];
+        beacon_times = [beacon_times, test_Beacon(pulseParam.interval,pulseParam.duration,pulseParam.count,[],0)];
         ud.beacon_times = beacon_times;
         set(figTC,'UserData',ud)
         %send_event('argD', 'argE', 'argF'); % Assuming send_event function is reusable

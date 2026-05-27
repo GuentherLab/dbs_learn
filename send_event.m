@@ -4,7 +4,7 @@ function [event_times,code_sent,dio] = send_event(eventCode,varargin)
     %% event code
     % # "eventCode" =  chans to send envent, e.g. [1,4] => simultaneous DO-1 and DO-4
     % # "eventCodeVect" = converts "eventCode" to 1x8 binary vector; e.g. [1,4] => [1,0,0,1,0,0,0,0]
-    tic1 = tic;
+    %tic1 = tic;
     eventCodeVect = false(1,8);
     if isempty(eventCode)
         eventCode = 0;
@@ -71,7 +71,7 @@ function [event_times,code_sent,dio] = send_event(eventCode,varargin)
         if isvalid(t), wait(t); end
         if isvalid(t), delete(t); end
     end
-    toc(tic1)
+    %toc(tic1);
     code_sent = repmat(eventCodeVect,Rep,1);
     
     function toggle(~,~)
