@@ -34,8 +34,8 @@ end
 %% default parameters
 vardefault('op',struct);
 field_default('op','sub','qqq'); 
-field_default('op','ses','multisyl'); % 'subsyl' or 'multisyl'
-field_default('op','task', 'test2'); 
+field_default('op','ses','subsyl'); % 'subsyl' or 'multisyl'
+field_default('op','task', 'famil'); 
 field_default('op','step', 'unknown'); 
 field_default('op','record_audio', 1); 
 field_default('op','require_keypress_every_trial',0); % if true, experimenter must press any key at end of trial to proceed to next trial
@@ -98,7 +98,7 @@ paths = setpaths_dbs_learn(op,paths); %  add paths that are now specified due to
 paths.run_exp_op_file = [paths.beh, filesep, paths.filestr_step,'run-exp-op.mat'];
 
 paths.beacon_times_fname = [paths.beh, filesep, paths.filestr_step,'beacon-times.mat'];
-paths.event_log_fname = fullfile(paths.beh,sprintf('%s_eventlog.tsv',paths.filestr_step)); % this log is organized in a long format with each row as an event; it is redundant with the trial table but integrates all events (not just trial-specific events) in one place for easier reference; it also has a column for event code which can be used to identify sync pulses in the data
+paths.event_log_fname = fullfile(paths.beh,sprintf('%seventlog.tsv',paths.filestr_step)); % this log is organized in a long format with each row as an event; it is redundant with the trial table but integrates all events (not just trial-specific events) in one place for easier reference; it also has a column for event code which can be used to identify sync pulses in the data
 %op.log.events = table('Size',[0 4], 'VariableTypes',{'double','double','string','string'}, 'VariableNames',{'time','datenum','event','trial_info'}); % initialize an event log table in the ops struct to save events as they come in; this is redundant with the trial table but allows us to log non-trial-specific events in one place
 % convenience handle — captures file path and clock reference at run start
 log_event = @(event_name, trial_info, varargin) add_event(paths.event_log_fname, CLOCKp, event_name, trial_info, varargin{:});
