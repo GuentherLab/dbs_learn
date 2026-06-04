@@ -441,6 +441,7 @@ switch op.task
                 trials.t_sync_event_on(itrial) = tmp_time_sec; % overwrite this with the more accurate time from send_event
                 trials.t_trial_start(itrial) = tmp_time_sec; 
                 log_event('trial_start', sprintf('trial-%d',itrial), tmp_time_sec, evt_);
+                log_event('task_sync_event', sprintf('trial-%d',itrial), tmp_time_sec, evt_);
                 %{
                 trials.t_sync_event_on(itrial) = tmp_managed_time;
                 trials.t_trial_start(itrial) = tmp_managed_time; % overwrite this with the more accurate time from send_event
