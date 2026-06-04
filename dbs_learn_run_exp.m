@@ -337,9 +337,17 @@ switch op.task
                     %beacon_times = []; 
                     %paths.beacon_times_fname = [paths.beh, filesep, paths.filestr_step,'beacon-times.mat'];
                     while repeat_beacon
-                        beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count,[],0)];
+                        %beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count,[],0)];
+                        temp_beacon_times = test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count,[],0);
+                        beacon_times = [beacon_times, temp_beacon_times];
+                        %beacon_times = [beacon_times, test_Beacon(op.pulse.interval,op.pulse.duration,op.pulse.count)];
                         save(paths.beacon_times_fname, 'beacon_times');
                         writematrix(beacon_times,strrep(paths.beacon_times_fname,'.mat','.tsv'),'FileType','text','Delimiter','tab')
+                        for ii=1:length(temp_beacon_times)
+                            dn_ = temp_beacon_times(ii);
+                            %add_event(paths.event_log_fname, CLOCKp, 'pcp_sync', 'pre-run', (dn_-CLOCKp_dn)*86400, dn_);
+                            log_event('pcp_sync', sprintf('trial-%d', itrial), (dn_-CLOCKp_dn)*86400, dn_);
+                        end
                         answer = questdlg('Repeat pulse or continue to next experimental block?','','Repeat pulse','Continue to next block','Repeat pulse');
                         if char(answer) == "Continue to next block"
                             repeat_beacon = 0;
@@ -378,7 +386,7 @@ switch op.task
                             %
                             for ii=1:length(beacon_times_new)
                                 dn_ = beacon_times_new(ii);
-                                log_event(paths.event_log_fname, 'pcp_sync', sprintf('trial-%d', itrial), (dn_-CLOCKp_dn)*86400, dn_); % log the new beacon times as user-triggered events in the event log; this is important for verifying that these sync pulses are captured in the data and aligned properly with the trial events
+                                log_event('pcp_sync', sprintf('trial-%d', itrial), (dn_-CLOCKp_dn)*86400, dn_); % log the new beacon times as user-triggered events in the event log; this is important for verifying that these sync pulses are captured in the data and aligned properly with the trial events
                             end
                         end
                         %log_event('pcp_sync', 'during-pause', NaN, temp_beacon_times(ii));
