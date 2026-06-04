@@ -77,7 +77,7 @@ if exist('op','var')
             paths.landmarks_file = [paths.annot filesep, 'sub-',op.sub, '_ses-',op.ses,  '_sync-landmarks.tsv']; 
             paths.trial_audio = [paths.der_sub, filesep, 'trial-audio']; 
             paths.src_runs_table = [paths.src_ses, filesep, 'sub-',op.sub,'_ses-',op.ses, '_runs.tsv']; 
-            paths.sync_ses = [paths.annot, filesep, 'sub-',op.sub, '_ses-',op.ses, 'sync.tsv']; 
+            paths.sync_ses = [paths.annot, filesep, 'sub-',op.sub, '_ses-',op.ses, '_sync.tsv']; 
             if isfield(op,'task')
                 % manual behavior annotation - use xlsx for phonetic fonts etc
                 paths.beh_annot_table = [paths.trial_audio, filesep, ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_beh-annot.xlsx']];
