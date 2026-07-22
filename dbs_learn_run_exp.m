@@ -12,7 +12,7 @@
 %
 % options for op.task:
 %   trialed speech tasks: 'famil','assess','pretest','trainA','trainB','test1','test2','fds'
-%   untrialed tasks: 'base-controlled','reading','hand-oc','reading-hand-oc'
+%   untrialed tasks: 'base-controlled','reading','hand-oc','reading-hand-oc','tell'
 
 function dbs_learn_run_exp(op)
 
@@ -145,7 +145,7 @@ switch op.task
             op.require_keypress_every_trial = 1;
         end
 
-    case {'base-controlled','base-free','reading','hand-oc','reading-hand-oc'}
+    case {'base-controlled','base-free','reading','hand-oc','reading-hand-oc','tell'}
         field_default('op','ortho_font_size',75);
 
 end
@@ -628,7 +628,7 @@ switch op.task
         fprintf('\n Press any key to end this task \n')
         pause()
 
-    case {'base-controlled','reading','reading-hand-oc'}
+    case {'base-controlled','reading','reading-hand-oc','tell'}
         pause(0.1)
         fprintf('\n\n')
         proceed = ''; 

@@ -6,3 +6,4 @@ multisyl	"famil, assess, pretest, trainA, trainB, test1, test2"	"When a sequence
 "subsyl, multisyl"	reading	"When text appears,; read it aloud; Stop reading when the text disappears"
 "subsyl, multisyl"	hand-oc	"When the green cross appears,;  open and close both hands;  until the green cross disappears"
 "subsyl, multisyl"	reading-hand-oc	"When the next text appears,; read the text;  while opening and closing both hands "
+"subsyl, multisyl"	tell	TELL task in progress
