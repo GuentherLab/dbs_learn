@@ -145,7 +145,7 @@ switch op.task
             op.require_keypress_every_trial = 1;
         end
 
-    case {'base-controlled','base-free','reading','hand-oc','reading-hand-oc','tell'}
+    case {'base-controlled','misc','reading','hand-oc','reading-hand-oc','tell'}
         field_default('op','ortho_font_size',75);
 
 end
@@ -351,6 +351,9 @@ switch op.task
                         answer = questdlg('Repeat pulse or continue to next experimental block?','','Repeat pulse','Continue to next block','Repeat pulse');
                         if char(answer) == "Continue to next block"
                             repeat_beacon = 0;
+                            t_pause_after_resume = 3;
+                            fprintf('Resuming next block in %1.1f sec..\n',t_pause_after_resume)
+                            pause(t_pause_after_resume)
                         end
                     end
             
@@ -628,7 +631,7 @@ switch op.task
         fprintf('\n Press any key to end this task \n')
         pause()
 
-    case {'base-controlled','reading','reading-hand-oc','tell'}
+    case {'base-controlled','reading','reading-hand-oc','tell','misc'}
         pause(0.1)
         fprintf('\n\n')
         proceed = ''; 
