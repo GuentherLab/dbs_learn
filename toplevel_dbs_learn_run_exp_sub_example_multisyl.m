@@ -1,4 +1,4 @@
-%%%%%% top-level file for calling main task script for a session
+%%%%%% top-level file for calling main task script for a multisyllabic session
 
 clear
 op.sub = 'qqq';

@@ -1,4 +1,4 @@
-
+clear
 
 op.sub = 'qqq';
 op.ses = 'subsyl'; 
