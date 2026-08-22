@@ -20,8 +20,12 @@
 %%% ... in this case, step ID will already have been assigned by some other means
 %%% ... and it can be read from a trials table file and automatically added to the table
 
+
 %%%  option 3 (post-session): set 'op.task_schedule' to true; runs table will be constructed be adapting the TaskSchedule file
 %%% ... this .xlsx file is expected to be in ../sourcedata/[SESSION]
+%%% ................ if it's not there, search in Teams for the subject name, find the file ending in "_completed.xlsx" for this session
+............. or look in https://partnershealthcare-my.sharepoint.com/personal/therrington_mgh_harvard_edu/Documents/LabProjects/2025_SpeechMotorLearning/2025_R01-SpeechMotorLeaning/05_Experiment_Sessions
+.................... and copy it into ../sourcedata/[SESSION]
 
 
 function create_runs_table(op)
@@ -30,7 +34,7 @@ if ~exist('op','var')
     op = struct;
 end
 
-field_default('op','sub','sml004');
+field_default('op','sub','sml011');
 field_default('op','convert_from_task_schedule',1);
 
 paths = setpaths_dbs_learn(op);
@@ -65,7 +69,7 @@ for thisses = seslist
         if op.convert_from_task_schedule
 
             % find the TaskSchedule file... regexp allows for slight variations in filename
-            pat = ['^(sub-)?(?i)',upper(op.sub),'(?i)_ses-.*_TaskSchedule[_-]completed.xlsx$'];
+            pat = ['^(sub-)?(?i)',upper(op.sub),'(?i)_ses-.*[_-]completed.xlsx$'];
             filelist = cellstr(ls(paths.src_ses));
             paths.task_sched = [paths.src_ses, filesep, filelist{cellfun(@(x)~isempty(regexp(x,pat)), filelist)}];
             assert(exist(paths.task_sched,'file')); 
