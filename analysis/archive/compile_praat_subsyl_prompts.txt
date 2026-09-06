@@ -1,0 +1,28 @@
+create a matlab function 'compile_praat_trial_annotation' of the form: 
+trials_out = compile_praat_trial_annotation(trials_in, praat_files_dir,cfg)
+….
+This will take in a table trials_in (table), praat_files_dir (directory - string), and optionally cfg (struct). 
+….
+trials_in contains fields trial_id (positive integer), praat_file_start (double)
+…
+cfg contains fields:
+-praat_tiers… table specifying tiers to find in the textgrid files; for each trial, info from these tiers will be added to the trials table
+………. if not provided, add all praat tiers
+….. praat_tiers contains these table variables
+---name: must correspond to 'name' in the textgrid file
+---class: indicates what how this variable should be imported into matlab and added to the trial table … generally this should be timing, double, string, cell, or logical
+---n_times_min_max: array of 2 doubles. only applies if class==timing. this indicates how many timepoints have been manually marked. 
+---timepoint_names: only for class==timing. this specifies the matlab table variable names that will correspond to each of the timepoints in this tier. if not empty, then n_times_min_max must have only 1 allowed value, and this value must be equal to the number of table variable names listed here in timepoint_names. throw error if this is not the case. for example of correct usage, we might have n_times_min_max = [2 2] and timepoint_names = {'speech_onset','speech_offset'}. 
+…
+First make trials_out as a copy of trials_in
+For each trial in the table, find a file in the files_dir that ends in 'trial-{TRIAL_ID}.textgrid'. (attached is an example textgrid for a trial; look up formatting of TextGrid files used by Praat.) Open that textgrid. 
+Then, try to add info from each of the specified tiers in cfg.praat_tiers. If cfg.praat_tiers was not provided, then use the first trial construct this table, and assume that the all tiers should be imported as class 'cell'. 
+For each tier:
+-if there is only 1 interval in the textgrid and the 'text' field is empty, there is no info for this tier for this trial; leave the corresponding spot in the trials table empty
+-if cfg.praat_tiers.class for this tier was not specified (if it's empty), then as a default set it to 'cell'
+-if the specified matlab class for this tier is double, string, or logical, then there must be only 1 interval for this tier for each trial. if there is more than one interval, throw an error explaining this; specify the trial where it occurred, the tier in question, and the number of values and the values found that violate this single-value assumption. 
+---for double/string/logical: look for value of 'text' in the textgrid for this tier. add the contents to the matlab trials table variable corresponding to this tier, with the class specified by cfg.praat_tiers.class. for example, 'correct_response' might be added as a logical, while 'transcript' might be added as a string 
+-if the specified matlab class is cell, then you will add one element to the cell corresponding to this trial/tier for each 'interval' in the textgrid. these should always be imported as strings
+-if the class of this tier was 'timing', then this is a tier/variable where we are expecting there to be more than 1 interval. these are variables where, in praat, the manual annotator had clicked specific points to indicate events within this trial, e.g. speech onset and offset. the number of marked timepoints is equal to the number of intervals minus 1. throw an error with full explanation if either there is only 1 interval (no timepoints have been manually marked). 
+---if timepoint_names was not specified, then you will use one table variable in the trials table for this tier - a cell array containing timepoints (1 x N double array). to compute the timepoints specified, find the xmax time for each interval in this tier except for the last interval. These xmax times indicate the marked time relative to the start of the audio file that was scored, which we need to convert to global time coordinates (GTC). to do this conversion, look in the trial table variable praat_file_start for this trial (which is in GTC). add this praat_file_start(itrial) time to the xmax time to get the timpoint in question in gtc. add all timepoints (in gtc) for this trial to the cell array of doubles for this trial for this tier/table-variable in the trials table 
+---if n_times_min_max was specified for this tier, check whether the number of marked timepoints for this trial is within the range specified - if not, throw error. then, we are going to compute the GTC for all timepoints in this trial, as we would do with non-specified timepoint_names (with n_intervals minus 1 timepoints, specified by xmax). However, instead of adding all timepoints to a single table variable within a cell, we are going to add timepoint for the trial to a distinct named table variable. the names of these table variables should be specified by cfg.praat_tiers.timepoint_names for this tier. 
