@@ -9,10 +9,10 @@ function cut_audio_trials(op)
 %% params
 vardefault('op',struct);
 
-field_default('op','sub','sml011');
+field_default('op','sub','sml003');
 
-field_default('op','ses','multisyl');
-    % field_default('op','ses','subsyl');
+% field_default('op','ses','multisyl');
+    field_default('op','ses','subsyl');
 
     field_default('op','postproc_gain',10);
 
