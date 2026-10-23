@@ -30,6 +30,29 @@ if op.newfig
     hfig = figure('Color','w'); 
 end
 
+task_order = {'trainA','trainB','novel1','novel2','novel1_nat','novel2_nat','novel1_nn','novel2_nn'}; 
+
+%%
+% 1. Get the current row names of your table
+current_names = outtab.Properties.RowNames;
+
+% 2. Find row names that are in task_order, preserving task_order's alignment
+% 'stable' ensures the order of task_order is strictly maintained
+ordered_matches = intersect(task_order, current_names, 'stable');
+
+% 3. Find any remaining row names that weren't included in task_order
+% 'stable' preserves their original relative order from the table
+remaining_names = setdiff(current_names, ordered_matches, 'stable');
+
+% 4. Combine them into the final desired row name order
+final_order = [ordered_matches; remaining_names];
+
+% 5. Index back into the table to reorder the rows
+outtab = outtab(final_order, :);
+
+
+
+%%
 for isortval = 1:n_sortvals
     this_sortval = unq_sortvals{isortval};
     matchrows = string(op.intable{:,op.sortvar})==this_sortval; 
@@ -50,6 +73,17 @@ for isortval = 1:n_sortvals
     ylim(op.ylimits)
     hold on
 
+    if any(strcmp(this_sortval,{'trainA','trainB'}))
+       cfg = [];
+        cfg.sub = op.sub;
+        cfg.ses = op.ses;
+        cfg.task = this_sortval;
+        outtab.dbs_train_state{isortval} = get_dbs_state(cfg); 
+    else
+        outtab.dbs_train_state{isortval} = '';
+    end
+    outtab.leglabel{isortval} = [this_sortval, ' ', outtab.dbs_train_state{isortval}]; 
+
 end
 
 hax = gca;
@@ -59,5 +93,6 @@ hax.YColor = 'k';
 
 hylab = ylabel(op.plotvar,'Interpreter','none');
 hxlab = xlabel(op.xlabel,'Interpreter','none');
-hleg = legend(unq_sortvals, 'Location',op.legend_location, 'Interpreter','none');
+hleg = legend(outtab.leglabel, 'Location',op.legend_location, 'Interpreter','none');
 box off
+

@@ -12,14 +12,20 @@ function compile_praat_dbs_learn(op)
 vardefault('op',struct);
 
 
-field_default('op','sub','sml003')
-field_default('op','task','test1')
+field_default('op','sub','sml011')
 
-field_default('op','chan','headphone')
-% field_default('op','chan','mic')
+field_default('op','task','assess')
+% field_default('op','task','pretest')
+% field_default('op','task','trainA')
+% field_default('op','task','trainB')
+% field_default('op','task','test1')
+% field_default('op','task','test2')
 
-field_default('op','ses','subsyl') 
-% field_default('op','ses','multisyl') 
+% field_default('op','chan','headphone')
+field_default('op','chan','mic')
+
+% field_default('op','ses','subsyl') 
+field_default('op','ses','multisyl') 
 
 % Validate task selection
 valid_tasks = {'subsyl', 'multisyl'};

@@ -99,3 +99,46 @@ subplot(1,2,2)
     subtitle(['Subject ', op.sub, ' - test on'],'Color','k')    
 
     
+
+%%
+close all
+
+op = []; 
+op.sub = 'sml011';
+op.ses = 'multisyl'; 
+
+op.newfig = 0; 
+
+paths = setpaths_dbs_learn(op);
+
+runs = readtable(paths.src_runs_table,'FileType','text','Delimiter','tab'); 
+    runs = runs(~isnan(runs.run),:); 
+    runs.Properties.RowNames = runs.task;
+
+tasklist = {'trainA','trainB'}; op.windowsize = 3; 
+% tasklist = {'test1','test2'}; op.windowsize = 2; 
+% tasklist = {'pretest','trainA','trainB','test1','test2'};
+
+hfig = figure('WindowState', 'maximized', 'Color','w')
+
+for itask = 1:length(tasklist)
+    subplot(1,length(tasklist),itask)
+
+    op.task = tasklist{itask}; 
+    op.run = runs{op.task,'run'};
+    paths = setpaths_dbs_learn(op);
+    
+    
+    trials_acc = readtable(paths.beh_annot_table);
+    trials_acc.prop_correct = trials_acc.accuracy ./ trials_acc.n_syllables;
+    
+    op.intable = trials_acc;
+    op.plotvar = 'prop_correct';
+    op.sortvar = 'stim_group'; 
+    outtab = plot_windowed_timecourse(op); 
+    % 
+    % hlgd = findobj(gcf, 'Type', 'Legend');
+end
+
+sgtitle(op.sub)
+ylim([0 0.8])
