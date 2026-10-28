@@ -4,8 +4,8 @@ clear
 op.sub = 'qqq';
 op.dx = ''; 
 op.ses = 'multisyl'; 
-op.is_dbs_run = 1; 
-op.record_audio = 1; 
+op.is_dbs_run = 0; 
+op.record_audio = 0; 
 
 %% famil
 op.task='famil'; 

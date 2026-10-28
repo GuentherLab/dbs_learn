@@ -6,10 +6,10 @@
 function create_sync_landmark_tables(op)
 
 vardefault('op',struct);
-field_default('op','sub','sml004');
+field_default('op','sub','sml011');
 
-field_default('op','ses','subsyl');
-    % field_default('op','ses','multisyl');
+% field_default('op','ses','subsyl');
+    field_default('op','ses','multisyl');
 
 [paths, compname] = setpaths_dbs_learn(op);
 
