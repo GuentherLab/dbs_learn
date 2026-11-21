@@ -16,7 +16,7 @@ compname = getenv('COMPUTERNAME');
 switch compname 
     case '677-GUE-WL-0012' %%% thinkpad to stay in dbs-learn experiment room
         paths.code = 'C:\code';
-    case {'677-GUE-WL-0010', 'AMSMEIER'} % AM thinkpad, strix 
+    case {'677-GUE-WL-0010', 'AMSMEIER', 'DESKTOP-O0AUJ4Q'} % AM thinkpad, strix, TH lab server
         paths.code = 'C:\docs\code'; 
     case 'ORDI'
         paths.code = 'C:\Users\lwolf\github_repos'; 
@@ -59,6 +59,7 @@ paths.cohort_dbs_states = [paths.data_remote, filesep, 'cohort_dbs_states.tsv'];
 
 addpath(genpath([paths.code_dbs_learn, filesep, 'NIMH_daqtoolbox_(Apr-7-2016)'])) % needed for sending beacon
 
+ft_defaults()   %%% needed to running ZY syncing code
 set(0,'defaultTextInterpreter','none') 
 
 %% if more details are provided, output relevant paths
