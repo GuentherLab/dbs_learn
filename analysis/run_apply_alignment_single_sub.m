@@ -13,8 +13,25 @@
 % This script reads the preproc MAT file and creates diagnostics only.
 % It does not modify the source preproc file or write outputs.
 
+
+%% set paths
+
 clearvars;
 clc;
+
+op.sub = 'sml012'; 
+op.ses = 'multisyl'; 
+op.task = 'trainB';
+op.preproc_filename = 'C201_MSL-Train-B_DBS-OFF_SURVEY_preproc_260812-230758.mat'; 
+% 
+% op.sub = 'sap022'; 
+% op.ses = 'stut'; 
+% op.task = 'SpHOC';
+% op.preproc_filename = 'sub-sap022_ses-stut_step-B201_task-SpHOC_DAM-ON_DBS-ON_SENSE_preproc_250730-133621.mat'; 
+
+%%
+
+paths = setpaths_dbs_learn(op); 
 
 this_file = mfilename('fullpath');
 demo_dir = fileparts(this_file);
@@ -31,13 +48,10 @@ if exist(packages_dir, 'dir') == 7
     addpath(genpath(packages_dir));
 end
 
-fdir_dbs = "C:\Users\speech\Partners HealthCare Dropbox\Andrew Meier\R01-SML_data_shared\sourcedata\sml012\ses-multisyl\dbs-recordings\";
-fdir_preproc = fdir_dbs;
+fpath_preproc = fullfile( paths.src_dbs_task, op.preproc_filename); 
 
-fpath_preproc = fullfile( ...
-    fdir_preproc, 'task-trainB\', ...
-    'C201_MSL-Train-B_DBS-OFF_SURVEY_preproc_260812-230758.mat');
-
+%%%%%%%%%%% NB - make sure that you are using the Fieldtrip version of filtfilt....
+..... not the Matlab signal processing toolbox version
 assert(exist(fpath_preproc, 'file') == 2, ...
     'Preproc file was not found:\n%s', fpath_preproc);
 assert(exist('ft_preprocessing', 'file') == 2, ...

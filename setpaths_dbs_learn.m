@@ -16,15 +16,19 @@ compname = getenv('COMPUTERNAME');
 switch compname 
     case '677-GUE-WL-0012' %%% thinkpad to stay in dbs-learn experiment room
         paths.code = 'C:\code';
-    case {'677-GUE-WL-0010', 'AMSMEIER', 'DESKTOP-O0AUJ4Q'} % AM thinkpad, strix, TH lab server
+        paths.data_remote = 'C:\Dropbox\R01-SML_data_shared'; % remote data - upload here after a session and analyze from here
+    case {'677-GUE-WL-0010', 'AMSMEIER'} % AM thinkpad, strix
         paths.code = 'C:\docs\code'; 
+        paths.data_remote = 'C:\Dropbox\R01-SML_data_shared'; % remote data - upload here after a session and analyze from here
+    case  'DESKTOP-O0AUJ4Q'
+        paths.code = 'C:\docs\code'; 
+        paths.data_remote = 'C:\Users\speech\Partners HealthCare Dropbox\Andrew Meier\R01-SML_data_shared'; % TH lab server
     case 'ORDI'
         paths.code = 'C:\Users\lwolf\github_repos'; 
 end
 
 paths.data_local  = 'C:\dbs_learn_data'; % local location to save when running experiment
-paths.data_remote = 'C:\Dropbox\R01-SML_data_shared'; % remote data - upload here after a session and analyze from here
-    paths.groupanalysis = [paths.data_remote, filesep, 'groupanalysis']; 
+paths.groupanalysis = [paths.data_remote, filesep, 'groupanalysis']; 
 
 
 if ~isfield(paths,'data')
@@ -40,6 +44,7 @@ paths.stim = [paths.code_dbs_learn, filesep, 'stimuli'];
 paths.spm = [paths.code, filesep, 'spm12']; %%%% 
 paths.fieldtrip_toolbox = [paths.code, filesep, 'fieldtrip']; % only used in analysis, not running experiment
 paths.bml = [paths.code, filesep, 'bml']; % RM Richardson lab toolbox
+paths.ieeg_ft_funcs_am = fullfile(paths.code, 'ieeg_ft_funcs_am'); 
 
 % paths to specific reference files
 paths.subject_list_master = [paths.data_remote, filesep, 'subject_list_master.xlsx'];
@@ -50,6 +55,9 @@ paths.cohort_dbs_states = [paths.data_remote, filesep, 'cohort_dbs_states.tsv'];
      [paths.code_dbs_learn, filesep, 'util'];...
      [paths.code_dbs_learn, filesep, 'behavior_annotation'];...
     [paths.code_dbs_learn, filesep, 'mPraat-master'];... % mPraat toolbox for interacting with Praat files
+    paths.ieeg_ft_funcs_am;...
+    fullfile(paths.ieeg_ft_funcs_am, 'preprocessing');... 
+    fullfile(paths.ieeg_ft_funcs_am, 'util');... 
     [paths.stim];...
     paths.spm;... %%%% use version of spm in fieldtrip
     paths.fieldtrip_toolbox;...
@@ -70,17 +78,25 @@ if exist('op','var')
         paths.der_sub = [paths.data, filesep, 'derivatives', filesep, op.sub]; 
         paths.annot = [paths.der_sub, filesep, 'annot']; 
         if isfield(op,'ses') % if session specified
-            paths.src_ses = [paths.src_sub, filesep,'ses-',op.ses]; 
-            paths.beh = [paths.src_ses, filesep, 'beh'];
+            paths.src_ses = [paths.src_sub, filesep,'ses-',op.ses];             
             paths.src_audvid = [paths.src_ses, filesep, 'audio-video'];
             paths.src_gopro = [paths.src_ses, filesep, 'gopro'];
+            paths.src_runs_table = [paths.src_ses, filesep, 'sub-',op.sub,'_ses-',op.ses, '_runs.tsv']; 
+            paths.src_dbs = fullfile(paths.src_ses, 'dbs-recordings'); 
+            paths.src_ced = fullfile(paths.src_ses, 'ced'); 
+            paths.beh = [paths.src_ses, filesep, 'beh'];
+
             paths.landmarks_file = [paths.annot filesep, 'sub-',op.sub, '_ses-',op.ses,  '_sync-landmarks.tsv']; 
             paths.trial_audio = [paths.der_sub, filesep, 'trial-audio']; 
-            paths.src_runs_table = [paths.src_ses, filesep, 'sub-',op.sub,'_ses-',op.ses, '_runs.tsv']; 
+            paths.event_audvid = fullfile(paths.der_sub, 'event-audio-video'); 
+            paths.sync_qc = fullfile(paths.der_sub, 'sync-qc');
             paths.sync_ses = [paths.annot, filesep, 'sub-',op.sub, '_ses-',op.ses, '_sync.tsv']; 
+
             if isfield(op,'task')
                 % manual behavior annotation - use xlsx for phonetic fonts etc
                 paths.beh_annot_table = [paths.trial_audio, filesep, ['sub-',op.sub, '_ses-',op.ses, '_task-',op.task, '_beh-annot.xlsx']];
+                paths.src_dbs_task = fullfile(paths.src_dbs, ['task-',op.task]);
+                paths.src_ced_task = fullfile(paths.src_ced, ['task-',op.task]);
                 if isfield(op,'run')
 
                     %%%% the following string gets used in a variety of files associated with this run
