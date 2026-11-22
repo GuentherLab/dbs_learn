@@ -86,7 +86,7 @@ if exist('op','var')
             paths.src_ced = fullfile(paths.src_ses, 'ced'); 
             paths.beh = [paths.src_ses, filesep, 'beh'];
 
-            paths.landmarks_file = [paths.annot filesep, 'sub-',op.sub, '_ses-',op.ses,  '_sync-landmarks.tsv']; 
+            paths.landmarks_file = [paths.annot filesep, 'sub-',op.sub, '_ses-',op.ses,  '_sync-landmarks.xlsx']; 
             paths.trial_audio = [paths.der_sub, filesep, 'trial-audio']; 
             paths.event_audvid = fullfile(paths.der_sub, 'event-audio-video'); 
             paths.sync_qc = fullfile(paths.der_sub, 'sync-qc');

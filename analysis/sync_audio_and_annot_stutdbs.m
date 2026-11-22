@@ -5,10 +5,16 @@
 
 clc; clear
 
+datetime
+
 op.sub = 'sap022'; 
 op.ses = 'stut'; 
 op.grouping_columns = {'step','task'}; 
 op.exclude_criteria = {'filename','sub-sap022_ses-stut_recording-thinkpad-lapelmic.wav'}; 
+% op.include_criteria = {'step','Z001'}; 
+% op.include_criteria = {'step',{'Z001','C001'}}; 
+
+op.show_qc_figs  = 1; 
 
 
 paths = setpaths_dbs_learn(op); 
