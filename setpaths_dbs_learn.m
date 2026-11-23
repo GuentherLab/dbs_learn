@@ -91,6 +91,8 @@ if exist('op','var')
             paths.event_audvid = fullfile(paths.der_sub, 'event-audio-video'); 
             paths.sync_qc = fullfile(paths.der_sub, 'sync-qc');
             paths.sync_ses = [paths.annot, filesep, 'sub-',op.sub, '_ses-',op.ses, '_sync.tsv']; 
+            paths.fieldtrip = fullfile(paths.der_sub, 'fieldtrip'); 
+
 
             if isfield(op,'task')
                 % manual behavior annotation - use xlsx for phonetic fonts etc
